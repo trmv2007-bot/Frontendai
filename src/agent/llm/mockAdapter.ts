@@ -30,7 +30,18 @@ export class MockAdapter implements LLMAdapter {
     let response = ''
     let toolCalls: any[] = []
 
-    if (lastUser.includes('draw') || lastUser.includes('canvas') || lastUser.includes('sketch')) {
+    if (lastUser.includes('collab') || lastUser.includes('team') || lastUser.includes('multi-agent')) {
+      toolCalls = [{ name: 'collaborate', arguments: { goal: messages[messages.length-1].content, personas: 'researcher,coder,critic' }, id: 'call_collab' }]
+      response = "Starting multi-agent collaboration..."
+    } else if (lastUser.includes('rag') || lastUser.includes('query files') || lastUser.includes('search files')) {
+      const q = messages[messages.length-1].content.replace(/.*rag\s*/i,'').trim() || lastUser
+      toolCalls = [{ name: 'queryFilesRAG', arguments: { query: q, topK: '5' }, id: 'call_rag' }]
+      response = `Searching files via RAG for "${q}"...`
+    } else if (lastUser.includes('clone') && lastUser.includes('voice')) {
+      const text = messages[messages.length-1].content.replace(/.*clone voice\s*/i,'').slice(0,300) || 'Hello from cloned voice!'
+      toolCalls = [{ name: 'cloneVoice', arguments: { text }, id: 'call_clone' }]
+      response = "Speaking with cloned voice profile..."
+    } else if (lastUser.includes('draw') || lastUser.includes('canvas') || lastUser.includes('sketch')) {
       const color = lastUser.includes('red') ? '#ef4444' : lastUser.includes('green') ? '#06ffa5' : lastUser.includes('blue') ? '#3b82f6' : '#8b5cf6'
       toolCalls = [{ name: 'drawOnCanvas', arguments: { action: 'rect', color, points: JSON.stringify([{x:100,y:100},{x:300,y:200}]) }, id: 'call_draw' }]
       response = "Drawing on canvas..."
@@ -151,6 +162,12 @@ function toolResultToMessage(tool: string, result: any, query: string): string {
       return result.success ? `Python executed!\nOutput:\n${result.output}\nResult: ${result.result || 'none'}` : `Python failed: ${result.error}`
     case 'drawOnCanvas':
       return result.success ? `Drew on canvas! Tool: ${result.action.tool}, color ${result.action.color}, ${result.totalStrokes} total strokes. Check Canvas tab.` : `Draw failed: ${result.error}`
+    case 'queryFilesRAG':
+      return result.count ? `RAG found ${result.count} chunks:\n${result.results.map((r:any)=>`• ${r.file} (score ${r.score.toFixed(3)}): ${r.preview}...`).join('\n')}\n\nContext ready for LLM.` : `RAG: ${result.error || 'No results. Index files in RAG tab first.'}`
+    case 'collaborate':
+      return `Team collaboration started! Session ${result.sessionId}, goal "${result.goal}", personas ${result.personas.join(', ')}. Check Team tab for live multi-agent chat.`
+    case 'cloneVoice':
+      return result.spoken ? `Cloned voice spoken! Profile ${result.profile}, pitch ${result.pitch}, rate ${result.rate}. Check Clone tab for profiles.` : `Clone failed: ${result.error}`
     default:
       return `Tool ${tool} returned: ${JSON.stringify(result).slice(0,500)}`
   }

@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
-import { X, MessageSquare, Brain, Wrench, StickyNote, CheckSquare, Settings, Command, Sparkles, Activity, Cpu, Eye, Mic, Share2, FileAudio, Palette, Terminal, FolderOpen, Bot, Radio, Database, Box, Clock } from 'lucide-react'
+import { X, MessageSquare, Brain, Wrench, StickyNote, CheckSquare, Settings, Command, Sparkles, Activity, Cpu, Eye, Mic, Share2, FileAudio, Palette, Terminal, FolderOpen, Bot, Radio, Database, Box, Clock, Users, FileSearch, Mic2 } from 'lucide-react'
 import type { AgentState, Message } from '../agent/types'
 import { Chat } from './Chat'
 import { ThoughtStream } from './ThoughtStream'
@@ -21,12 +21,18 @@ import { SwarmPanel } from './SwarmPanel'
 import { SubAgentsPanel } from './SubAgentsPanel'
 import { WebContainerPanel } from './WebContainerPanel'
 import { AutoMemoryPanel } from './AutoMemoryPanel'
+import { MultiAgentPanel } from './MultiAgentPanel'
+import { RAGPanel } from './RAG/RAGPanel'
+import { VoiceClonePanel } from './VoiceClonePanel'
 import { cn } from '../lib/utils'
 
-type Tab = 'chat' | 'vision' | 'voice' | 'canvas' | 'python' | 'node' | 'files' | 'opfs' | 'swarm' | 'subagents' | 'graph' | 'auto' | 'thoughts' | 'tools' | 'vault' | 'notes' | 'tasks' | 'settings'
+type Tab = 'chat' | 'vision' | 'voice' | 'canvas' | 'python' | 'node' | 'files' | 'opfs' | 'swarm' | 'subagents' | 'graph' | 'auto' | 'multi' | 'rag' | 'clone' | 'thoughts' | 'tools' | 'vault' | 'notes' | 'tasks' | 'settings'
 
 const TABS: { id: Tab, label: string, icon: any, desc: string }[] = [
   { id: 'chat', label: 'Chat', icon: MessageSquare, desc: 'Talk' },
+  { id: 'multi', label: 'Team', icon: Users, desc: 'Multi-agent' },
+  { id: 'rag', label: 'RAG', icon: FileSearch, desc: 'Files RAG' },
+  { id: 'clone', label: 'Clone', icon: Mic2, desc: 'Voice clone' },
   { id: 'vision', label: 'Vision', icon: Eye, desc: 'See' },
   { id: 'voice', label: 'Voice', icon: Mic, desc: 'Speak' },
   { id: 'canvas', label: 'Canvas', icon: Palette, desc: 'Draw' },
@@ -136,6 +142,9 @@ export function AgentDock({
             {/* content */}
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
               {tab === 'chat' && <Chat messages={messages} onSend={onSend} onClear={onClear} state={state} />}
+              {tab === 'multi' && <MultiAgentPanel />}
+              {tab === 'rag' && <RAGPanel />}
+              {tab === 'clone' && <VoiceClonePanel />}
               {tab === 'vision' && <div className="flex-1 overflow-y-auto p-4"><VisionPanel onAnalyze={(r) => onSend(`Vision analysis: ${r}`)} /></div>}
               {tab === 'voice' && <div className="flex-1 overflow-y-auto p-4 space-y-6"><VoiceControl onTranscript={(t) => onSend(t)} /><div className="border-t border-[#1e1e2e] pt-6"><h4 className="text-[12px] font-medium uppercase tracking-widest text-zinc-500 mb-3">Local Whisper</h4><WhisperControl onTranscript={(t) => onSend(t)} /></div></div>}
               {tab === 'canvas' && <CanvasBoard />}

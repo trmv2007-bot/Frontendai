@@ -361,5 +361,63 @@ export const TOOL_EXECUTORS: Record<string, Executor> = {
     } catch (e:any) {
       return { error: e.message }
     }
+  },
+
+  queryFilesRAG: async ({ query, topK = '5' }) => {
+    try {
+      const { queryRAG, buildRAGContext } = await import('../rag/fileRAG')
+      const results = await queryRAG(query, parseInt(topK))
+      const context = await buildRAGContext(query, parseInt(topK))
+      return { results: results.map(r => ({ file: r.chunk.fileName, score: r.score, preview: r.chunk.content.slice(0,200) })), context: context.slice(0,2000), count: results.length }
+    } catch (e:any) {
+      return { error: e.message }
+    }
+  },
+
+  collaborate: async ({ goal, personas }) => {
+    try {
+      const { getCollab } = await import('../collaboration/multiAgent')
+      const collab = getCollab()
+      const personaIds = personas ? personas.split(',').map((p:string)=>p.trim()) : ['researcher','coder','critic']
+      const session = collab.createSession(goal, personaIds)
+      return { sessionId: session.id, goal, personas: personaIds, status: 'running', note: 'Multi-agent collaboration started. Check Team tab for live chat.' }
+    } catch (e:any) {
+      return { error: e.message }
+    }
+  },
+
+  cloneVoice: async ({ text, profileId }) => {
+    try {
+      const profiles = JSON.parse(localStorage.getItem('frontendai_voice_profiles') || '[]')
+      let profile = profiles.find((p:any) => p.id === profileId) || profiles[0]
+      
+      if (!profile) {
+        // Use default voice with custom pitch/rate from localStorage or default
+        if ('speechSynthesis' in window) {
+          const utter = new SpeechSynthesisUtterance(text)
+          utter.pitch = 1.1
+          utter.rate = 0.9
+          speechSynthesis.speak(utter)
+          return { spoken: true, text, profile: 'default', pitch: 1.1, rate: 0.9 }
+        }
+        return { error: 'No voice profiles, and speechSynthesis not supported' }
+      }
+
+      if ('speechSynthesis' in window) {
+        const utter = new SpeechSynthesisUtterance(text)
+        const voices = speechSynthesis.getVoices()
+        const voice = voices.find((v:any) => v.name === profile.voiceName) || voices[0]
+        if (voice) utter.voice = voice
+        utter.pitch = profile.pitch
+        utter.rate = profile.rate
+        utter.volume = profile.volume
+        speechSynthesis.speak(utter)
+        return { spoken: true, text, profile: profile.name, pitch: profile.pitch, rate: profile.rate }
+      }
+
+      return { error: 'speechSynthesis not supported' }
+    } catch (e:any) {
+      return { error: e.message }
+    }
   }
 }

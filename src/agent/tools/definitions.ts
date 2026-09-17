@@ -313,5 +313,47 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     category: 'agent',
     icon: 'radio'
+  },
+  {
+    name: 'queryFilesRAG',
+    description: 'Query files via RAG — semantic search over indexed OPFS, notes, memories. Returns relevant chunks.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'search query' },
+        topK: { type: 'string', description: 'number of chunks' }
+      },
+      required: ['query']
+    },
+    category: 'productivity',
+    icon: 'file-search'
+  },
+  {
+    name: 'collaborate',
+    description: 'Start multi-agent collaboration with personas (researcher, coder, critic, creative, planner) on a goal.',
+    parameters: {
+      type: 'object',
+      properties: {
+        goal: { type: 'string', description: 'goal for team' },
+        personas: { type: 'string', description: 'comma separated persona ids: researcher,coder,critic,creative,planner' }
+      },
+      required: ['goal']
+    },
+    category: 'agent',
+    icon: 'users'
+  },
+  {
+    name: 'cloneVoice',
+    description: 'Speak with cloned voice profile. Uses pitch/rate from voice cloning.',
+    parameters: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'text to speak' },
+        profileId: { type: 'string', description: 'voice profile id, optional, uses default if not provided' }
+      },
+      required: ['text']
+    },
+    category: 'system',
+    icon: 'mic-2'
   }
 ]
