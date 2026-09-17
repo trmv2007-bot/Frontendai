@@ -78,10 +78,22 @@ FrontendAI is a fully autonomous agent OS that runs on WebGPU, IndexedDB, and br
 
 ## 🚀 Quick Start
 
+One command. Works on **Windows (native or WSL), Linux, and macOS** — needs Node `20.19+` or `22.12+`.
+
 ```bash
 npm install
-npm run dev
 ```
+
+Then start the dev server with `npm run dev` and open http://localhost:5173.
+
+> **Why install is this quiet:** `.npmrc` sets `ignore-scripts=true`. This app is
+> browser-only, and the only dependency with a native install step is
+> `onnxruntime-node` — reachable solely through `@huggingface/transformers`' `node`
+> export condition, which Vite never resolves (it uses the `default` condition →
+> `transformers.web.js` / onnxruntime-web WASM). Every binary the build *does* need
+> (rolldown, lightningcss, sharp) ships as `optionalDependencies` tarballs, so npm
+> picks the right one for your OS/arch with no compile step. Delete that line if you
+> add a dependency that must build at install time.
 
 Try:
 - "Take screenshot and analyze"
