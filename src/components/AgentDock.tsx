@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
-import { X, MessageSquare, Wrench, Settings, Command, Sparkles, Activity, Cpu, Eye, Mic, Share2, Palette, Terminal, FolderOpen, Bot, Radio, Database, Box, Clock, Users, FileSearch, Mic2, Puzzle, HardDrive } from 'lucide-react'
+import { X, MessageSquare, Wrench, Settings, Command, Sparkles, Activity, Cpu, Eye, Mic, Share2, Palette, Terminal, FolderOpen, Bot, Radio, Database, Box, Clock, Users, FileSearch, Mic2, Puzzle, HardDrive, Package } from 'lucide-react'
 import type { AgentState, Message } from '../agent/types'
 import { Chat } from './Chat'
 import { ThoughtStream } from './ThoughtStream'
@@ -27,9 +27,10 @@ import { VoiceClonePanel } from './VoiceClonePanel'
 import { PluginMarketplace } from './Plugins/PluginMarketplace'
 import { VoiceToVoicePanel } from './VoiceToVoicePanel'
 import { CRDTPanel } from './CRDTPanel'
+import { ExportPanel } from './Export/ExportPanel'
 import { cn } from '../lib/utils'
 
-type Tab = 'chat' | 'v2v' | 'multi' | 'rag' | 'clone' | 'plugins' | 'crdt' | 'vision' | 'voice' | 'canvas' | 'python' | 'node' | 'files' | 'opfs' | 'swarm' | 'subagents' | 'graph' | 'auto' | 'thoughts' | 'tools' | 'vault' | 'notes' | 'tasks' | 'settings'
+type Tab = 'chat' | 'v2v' | 'multi' | 'rag' | 'clone' | 'plugins' | 'crdt' | 'export' | 'vision' | 'voice' | 'canvas' | 'python' | 'node' | 'files' | 'opfs' | 'swarm' | 'subagents' | 'graph' | 'auto' | 'thoughts' | 'tools' | 'vault' | 'notes' | 'tasks' | 'settings'
 
 const TABS: { id: Tab, label: string, icon: any, desc: string }[] = [
   { id: 'chat', label: 'Chat', icon: MessageSquare, desc: 'Talk' },
@@ -39,6 +40,7 @@ const TABS: { id: Tab, label: string, icon: any, desc: string }[] = [
   { id: 'clone', label: 'Clone', icon: Mic2, desc: 'Voice clone' },
   { id: 'plugins', label: 'Plugins', icon: Puzzle, desc: 'Marketplace' },
   { id: 'crdt', label: 'CRDT', icon: HardDrive, desc: 'Multi-tab sync' },
+  { id: 'export', label: 'Export', icon: Package, desc: 'PWA • Ext • Single' },
   { id: 'vision', label: 'Vision', icon: Eye, desc: 'See' },
   { id: 'canvas', label: 'Canvas', icon: Palette, desc: 'Draw' },
   { id: 'python', label: 'Python', icon: Terminal, desc: 'Pyodide' },
@@ -153,6 +155,7 @@ export function AgentDock({
               {tab === 'clone' && <VoiceClonePanel />}
               {tab === 'plugins' && <PluginMarketplace />}
               {tab === 'crdt' && <CRDTPanel />}
+              {tab === 'export' && <ExportPanel />}
               {tab === 'vision' && <div className="flex-1 overflow-y-auto p-4"><VisionPanel onAnalyze={(r) => onSend(`Vision analysis: ${r}`)} /></div>}
               {tab === 'voice' && <div className="flex-1 overflow-y-auto p-4 space-y-6"><VoiceControl onTranscript={(t) => onSend(t)} /><div className="border-t border-[#1e1e2e] pt-6"><h4 className="text-[12px] font-medium uppercase tracking-widest text-zinc-500 mb-3">Local Whisper</h4><WhisperControl onTranscript={(t) => onSend(t)} /></div></div>}
               {tab === 'canvas' && <CanvasBoard />}
