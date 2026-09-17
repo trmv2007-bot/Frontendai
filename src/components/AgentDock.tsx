@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
-import { X, MessageSquare, Brain, Wrench, StickyNote, CheckSquare, Settings, Command, Sparkles, Activity, Cpu, Eye, Mic, Share2, FileAudio, Palette, Terminal, FolderOpen, Bot, Radio } from 'lucide-react'
+import { X, MessageSquare, Brain, Wrench, StickyNote, CheckSquare, Settings, Command, Sparkles, Activity, Cpu, Eye, Mic, Share2, FileAudio, Palette, Terminal, FolderOpen, Bot, Radio, Database, Box, Clock } from 'lucide-react'
 import type { AgentState, Message } from '../agent/types'
 import { Chat } from './Chat'
 import { ThoughtStream } from './ThoughtStream'
@@ -16,11 +16,14 @@ import { WhisperControl } from './WhisperControl'
 import { CanvasBoard } from './CanvasBoard'
 import { PythonREPL } from './PythonREPL'
 import { FileVault } from './FileSystem/FileVault'
+import { OPFSPanel } from './FileSystem/OPFSPanel'
 import { SwarmPanel } from './SwarmPanel'
 import { SubAgentsPanel } from './SubAgentsPanel'
+import { WebContainerPanel } from './WebContainerPanel'
+import { AutoMemoryPanel } from './AutoMemoryPanel'
 import { cn } from '../lib/utils'
 
-type Tab = 'chat' | 'vision' | 'voice' | 'whisper' | 'canvas' | 'python' | 'files' | 'swarm' | 'subagents' | 'graph' | 'thoughts' | 'tools' | 'vault' | 'notes' | 'tasks' | 'settings'
+type Tab = 'chat' | 'vision' | 'voice' | 'canvas' | 'python' | 'node' | 'files' | 'opfs' | 'swarm' | 'subagents' | 'graph' | 'auto' | 'thoughts' | 'tools' | 'vault' | 'notes' | 'tasks' | 'settings'
 
 const TABS: { id: Tab, label: string, icon: any, desc: string }[] = [
   { id: 'chat', label: 'Chat', icon: MessageSquare, desc: 'Talk' },
@@ -28,10 +31,13 @@ const TABS: { id: Tab, label: string, icon: any, desc: string }[] = [
   { id: 'voice', label: 'Voice', icon: Mic, desc: 'Speak' },
   { id: 'canvas', label: 'Canvas', icon: Palette, desc: 'Draw' },
   { id: 'python', label: 'Python', icon: Terminal, desc: 'Pyodide' },
+  { id: 'node', label: 'Node', icon: Box, desc: 'WebContainer' },
   { id: 'files', label: 'Files', icon: FolderOpen, desc: 'FS API' },
+  { id: 'opfs', label: 'OPFS', icon: Database, desc: 'Private FS' },
   { id: 'swarm', label: 'Swarm', icon: Radio, desc: 'P2P' },
   { id: 'subagents', label: 'Workers', icon: Bot, desc: 'Sub-agents' },
   { id: 'graph', label: 'Graph', icon: Share2, desc: 'Graph' },
+  { id: 'auto', label: 'AutoMem', icon: Clock, desc: 'Summarize' },
   { id: 'vault', label: 'Vault', icon: Sparkles, desc: 'Memory' },
   { id: 'tools', label: 'Tools', icon: Wrench, desc: 'Actions' },
   { id: 'settings', label: 'OS', icon: Settings, desc: 'System' },
@@ -134,10 +140,13 @@ export function AgentDock({
               {tab === 'voice' && <div className="flex-1 overflow-y-auto p-4 space-y-6"><VoiceControl onTranscript={(t) => onSend(t)} /><div className="border-t border-[#1e1e2e] pt-6"><h4 className="text-[12px] font-medium uppercase tracking-widest text-zinc-500 mb-3">Local Whisper</h4><WhisperControl onTranscript={(t) => onSend(t)} /></div></div>}
               {tab === 'canvas' && <CanvasBoard />}
               {tab === 'python' && <PythonREPL />}
+              {tab === 'node' && <WebContainerPanel />}
               {tab === 'files' && <FileVault />}
+              {tab === 'opfs' && <OPFSPanel />}
               {tab === 'swarm' && <SwarmPanel />}
               {tab === 'subagents' && <SubAgentsPanel />}
               {tab === 'graph' && <MemoryGraph />}
+              {tab === 'auto' && <AutoMemoryPanel />}
               {tab === 'thoughts' && <ThoughtStream messages={messages} state={state} />}
               {tab === 'tools' && <ToolTimeline messages={messages} />}
               {tab === 'vault' && <MemoryVault />}

@@ -5,6 +5,7 @@ import { useCompanion } from './hooks/useCompanion'
 import { AgentOrb } from './components/AgentOrb'
 import { AgentDock } from './components/AgentDock'
 import { CommandPalette } from './components/CommandPalette'
+import { startAutoSummarizer } from './agent/memory/summarizer'
 import { Sparkles, Cpu, Globe, Brain, Shield, Zap, Eye, Code, Database, MessageSquare, Moon, Coffee } from 'lucide-react'
 
 function Landing({ onOpen, companionMood, companionActions }: { onOpen: () => void, companionMood: string, companionActions: any[] }) {
@@ -243,6 +244,11 @@ export default function App() {
   const [paletteOpen, setPaletteOpen] = useState(false)
 
   useEffect(() => {
+    // Start auto-memory summarization
+    startAutoSummarizer((mems) => {
+      console.log('Auto-summary created', mems.length, 'memories')
+    })
+
     const handler = () => setPaletteOpen(o => !o)
     window.addEventListener('frontendai:toggle-palette' as any, handler)
     const keyHandler = (e: KeyboardEvent) => {
