@@ -1,10 +1,12 @@
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
   plugins: [
     react(),
+    tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.svg', 'icons/*.png', 'icons.svg'],
@@ -89,13 +91,8 @@ export default defineConfig({
       'X-Frame-Options': 'ALLOWALL'
     }
   },
-  build: {
-    rollupOptions: {
-      external: ['@mlc-ai/web-llm']
-    }
-  },
   optimizeDeps: {
-    exclude: ['@mlc-ai/web-llm', '@huggingface/transformers']
+    exclude: ['@huggingface/transformers']
   },
   assetsInclude: ['**/*.wasm'],
   worker: {
