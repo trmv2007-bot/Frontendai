@@ -299,5 +299,67 @@ export const TOOL_EXECUTORS: Record<string, Executor> = {
     } catch (e:any) {
       return { error: e.message }
     }
+  },
+
+  listFiles: async () => {
+    // Access via global file system handle if available
+    const dirHandle = (window as any).__frontendai_dirHandle
+    if (!dirHandle) return { error: 'No directory picked. Go to Files tab and pick directory first.' }
+    try {
+      const entries = []
+      // @ts-ignore
+      for await (const [name, handle] of dirHandle.entries()) {
+        entries.push({ name, kind: handle.kind })
+      }
+      return { files: entries, count: entries.length }
+    } catch (e:any) {
+      return { error: e.message }
+    }
+  },
+
+  readFile: async ({ name }) => {
+    const dirHandle = (window as any).__frontendai_dirHandle
+    if (!dirHandle) return { error: 'No directory picked' }
+    try {
+      const fileHandle = await dirHandle.getFileHandle(name)
+      const file = await fileHandle.getFile()
+      const content = await file.text()
+      return { name, content: content.slice(0,5000), size: file.size, fullLength: content.length }
+    } catch (e:any) {
+      return { error: e.message }
+    }
+  },
+
+  writeFile: async ({ name, content }) => {
+    const dirHandle = (window as any).__frontendai_dirHandle
+    if (!dirHandle) {
+      // Fallback download
+      const blob = new Blob([content], { type: 'text/plain' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = name; a.click()
+      URL.revokeObjectURL(url)
+      return { success: true, fallback: 'download', name }
+    }
+    try {
+      const fileHandle = await dirHandle.getFileHandle(name, { create: true })
+      const writable = await fileHandle.createWritable()
+      await writable.write(content)
+      await writable.close()
+      return { success: true, name, size: content.length }
+    } catch (e:any) {
+      return { error: e.message }
+    }
+  },
+
+  distributeTask: async ({ goal }) => {
+    try {
+      const { getSwarm } = await import('../p2p/swarm')
+      const swarm = getSwarm()
+      const taskId = swarm.distributeTask(goal)
+      return { taskId, goal, distributed: true, peers: swarm.getStats().peers, note: 'Task broadcast to swarm via BroadcastChannel. Other tabs will handle and respond.' }
+    } catch (e:any) {
+      return { error: e.message }
+    }
   }
 }

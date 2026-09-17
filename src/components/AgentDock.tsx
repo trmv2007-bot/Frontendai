@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { useState } from 'react'
-import { X, MessageSquare, Brain, Wrench, StickyNote, CheckSquare, Settings, Command, Sparkles, Activity, Cpu, Eye, Mic, Share2, FileAudio, Palette, Terminal } from 'lucide-react'
+import { X, MessageSquare, Brain, Wrench, StickyNote, CheckSquare, Settings, Command, Sparkles, Activity, Cpu, Eye, Mic, Share2, FileAudio, Palette, Terminal, FolderOpen, Bot, Radio } from 'lucide-react'
 import type { AgentState, Message } from '../agent/types'
 import { Chat } from './Chat'
 import { ThoughtStream } from './ThoughtStream'
@@ -15,23 +15,25 @@ import { MemoryGraph } from './MemoryGraph'
 import { WhisperControl } from './WhisperControl'
 import { CanvasBoard } from './CanvasBoard'
 import { PythonREPL } from './PythonREPL'
+import { FileVault } from './FileSystem/FileVault'
+import { SwarmPanel } from './SwarmPanel'
+import { SubAgentsPanel } from './SubAgentsPanel'
 import { cn } from '../lib/utils'
 
-type Tab = 'chat' | 'vision' | 'voice' | 'whisper' | 'graph' | 'canvas' | 'python' | 'thoughts' | 'tools' | 'vault' | 'notes' | 'tasks' | 'settings'
+type Tab = 'chat' | 'vision' | 'voice' | 'whisper' | 'canvas' | 'python' | 'files' | 'swarm' | 'subagents' | 'graph' | 'thoughts' | 'tools' | 'vault' | 'notes' | 'tasks' | 'settings'
 
 const TABS: { id: Tab, label: string, icon: any, desc: string }[] = [
-  { id: 'chat', label: 'Chat', icon: MessageSquare, desc: 'Talk to agent' },
-  { id: 'vision', label: 'Vision', icon: Eye, desc: 'See & analyze' },
-  { id: 'voice', label: 'Voice', icon: Mic, desc: 'Speak & listen' },
-  { id: 'whisper', label: 'Whisper', icon: FileAudio, desc: 'Local STT' },
-  { id: 'canvas', label: 'Canvas', icon: Palette, desc: 'Whiteboard' },
-  { id: 'python', label: 'Python', icon: Terminal, desc: 'Pyodide WASM' },
-  { id: 'graph', label: 'Graph', icon: Share2, desc: 'Memory graph' },
-  { id: 'thoughts', label: 'Mind', icon: Brain, desc: 'Chain of thought' },
-  { id: 'tools', label: 'Actions', icon: Wrench, desc: 'Tool calls' },
+  { id: 'chat', label: 'Chat', icon: MessageSquare, desc: 'Talk' },
+  { id: 'vision', label: 'Vision', icon: Eye, desc: 'See' },
+  { id: 'voice', label: 'Voice', icon: Mic, desc: 'Speak' },
+  { id: 'canvas', label: 'Canvas', icon: Palette, desc: 'Draw' },
+  { id: 'python', label: 'Python', icon: Terminal, desc: 'Pyodide' },
+  { id: 'files', label: 'Files', icon: FolderOpen, desc: 'FS API' },
+  { id: 'swarm', label: 'Swarm', icon: Radio, desc: 'P2P' },
+  { id: 'subagents', label: 'Workers', icon: Bot, desc: 'Sub-agents' },
+  { id: 'graph', label: 'Graph', icon: Share2, desc: 'Graph' },
   { id: 'vault', label: 'Vault', icon: Sparkles, desc: 'Memory' },
-  { id: 'notes', label: 'Notes', icon: StickyNote, desc: 'Knowledge' },
-  { id: 'tasks', label: 'Tasks', icon: CheckSquare, desc: 'Todo' },
+  { id: 'tools', label: 'Tools', icon: Wrench, desc: 'Actions' },
   { id: 'settings', label: 'OS', icon: Settings, desc: 'System' },
 ]
 
@@ -129,10 +131,12 @@ export function AgentDock({
             <div className="flex-1 overflow-hidden flex flex-col min-h-0">
               {tab === 'chat' && <Chat messages={messages} onSend={onSend} onClear={onClear} state={state} />}
               {tab === 'vision' && <div className="flex-1 overflow-y-auto p-4"><VisionPanel onAnalyze={(r) => onSend(`Vision analysis: ${r}`)} /></div>}
-              {tab === 'voice' && <div className="flex-1 overflow-y-auto p-4 space-y-6"><VoiceControl onTranscript={(t) => onSend(t)} /><div className="border-t border-[#1e1e2e] pt-6"><h4 className="text-[12px] font-medium uppercase tracking-widest text-zinc-500 mb-3">Local Whisper (fallback)</h4><WhisperControl onTranscript={(t) => onSend(t)} /></div></div>}
-              {tab === 'whisper' && <div className="flex-1 overflow-y-auto p-4"><WhisperControl onTranscript={(t) => onSend(t)} /></div>}
+              {tab === 'voice' && <div className="flex-1 overflow-y-auto p-4 space-y-6"><VoiceControl onTranscript={(t) => onSend(t)} /><div className="border-t border-[#1e1e2e] pt-6"><h4 className="text-[12px] font-medium uppercase tracking-widest text-zinc-500 mb-3">Local Whisper</h4><WhisperControl onTranscript={(t) => onSend(t)} /></div></div>}
               {tab === 'canvas' && <CanvasBoard />}
               {tab === 'python' && <PythonREPL />}
+              {tab === 'files' && <FileVault />}
+              {tab === 'swarm' && <SwarmPanel />}
+              {tab === 'subagents' && <SubAgentsPanel />}
               {tab === 'graph' && <MemoryGraph />}
               {tab === 'thoughts' && <ThoughtStream messages={messages} state={state} />}
               {tab === 'tools' && <ToolTimeline messages={messages} />}

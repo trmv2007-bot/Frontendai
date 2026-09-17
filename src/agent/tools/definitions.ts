@@ -255,7 +255,7 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
   },
   {
     name: 'spawnSubAgent',
-    description: 'Spawn a sub-agent to do a parallel task. Returns sub-agent ID.',
+    description: 'Spawn a sub-agent to do a parallel task. Returns sub-agent ID. Runs in Web Worker.',
     parameters: {
       type: 'object',
       properties: {
@@ -266,5 +266,52 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
     },
     category: 'agent',
     icon: 'bot'
+  },
+  {
+    name: 'listFiles',
+    description: 'List files in picked directory via File System Access API. Requires directory picked first in Files tab.',
+    parameters: { type: 'object', properties: {} },
+    category: 'productivity',
+    icon: 'folder'
+  },
+  {
+    name: 'readFile',
+    description: 'Read a file from picked directory. Returns content.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'file name' }
+      },
+      required: ['name']
+    },
+    category: 'productivity',
+    icon: 'file'
+  },
+  {
+    name: 'writeFile',
+    description: 'Write file to picked directory via File System Access API. Real file on disk.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'file name' },
+        content: { type: 'string', description: 'file content' }
+      },
+      required: ['name', 'content']
+    },
+    category: 'productivity',
+    icon: 'save'
+  },
+  {
+    name: 'distributeTask',
+    description: 'Distribute task to P2P swarm (other tabs). Uses BroadcastChannel + WebRTC.',
+    parameters: {
+      type: 'object',
+      properties: {
+        goal: { type: 'string', description: 'task to distribute' }
+      },
+      required: ['goal']
+    },
+    category: 'agent',
+    icon: 'radio'
   }
 ]
