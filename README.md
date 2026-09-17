@@ -2,7 +2,7 @@
 
 > No backend. No tracking. The AI that never leaves your browser.
 
-FrontendAI is a fully autonomous agent OS that runs on WebGPU, IndexedDB, and browser APIs. It can **see, hear, speak, remember forever, manage notes/tasks, run code** — all in your tab.
+FrontendAI is a fully autonomous agent OS that runs on WebGPU, IndexedDB, and browser APIs. It can **see, hear, speak, remember forever, draw, code in Python, manage notes/tasks** — all in your tab.
 
 **Live Demo:** Orb bottom-right → Chat, or press `⌘K`
 
@@ -13,60 +13,68 @@ FrontendAI is a fully autonomous agent OS that runs on WebGPU, IndexedDB, and br
 - ReAct loop: Thought → Action → Observation → Repeat
 - All execution in browser, no server
 
-## ✨ V3 Features (You asked "yes" — we built all)
+## ✨ V4 Features — You kept saying "yes"
 
-### 🎤 Voice — 100% Local
-- **Web Speech API**: STT (SpeechRecognition) + TTS (speechSynthesis)
-- **Whisper tiny.en** (40MB) via `@huggingface/transformers` — local STT fallback, WASM
-- Voice tab: waveform, voice selector, auto-speak toggle
-- Tool: `speak(text)` — agent can speak itself
-- Chat: mic button, live transcript, speak button on every message
+### 🧸 Companion Behaviors (New)
+- **Mood system**: `idle` → `curious` → `bored` → `sleepy` → `focused` based on idle time, tab visibility, agent status
+- **Idle detection**: 1min → bored suggestion, 2min → curious exploration, 5min → sleepy
+- **Tab sleep**: When tab hidden → Zzz animation, wake message on return
+- **Proactive nudges**: Suggests vault cleanup, graph view, reading page, drawing on canvas
+- **Orb**: Shows mood badge, Zzz floating animation when sleepy, thought bubble when thinking
+- **Toast**: Top-right companion thoughts (boredom, curiosity)
+- Hook: `useCompanion()` — tracks activity, visibility, mood
 
-### 👁️ Vision — 100% Local + BYOK
-- **Screenshot**: `html2canvas` renders DOM → canvas → data URL (no server)
-- **Local Vision**: `Xenova/vit-gpt2-image-captioning` (300MB) via transformers.js
-- **BYOK Vision**: GPT-4o vision via direct fetch (no proxy) if API key set
-- **WebLLM Vision**: LLaVA / Phi-3.5-vision support (experimental, needs WebGPU)
-- Vision tab: drag-drop, screenshot, 4 analysis modes
-- Tools: `captureScreenshot`, `analyzeImage`
+### 🎨 Infinite Canvas Whiteboard (New)
+- **CanvasBoard**: 1200x800 canvas with grid, tools: pencil, rect, circle, text, eraser
+- **Features**: color picker, line width, undo, save to notes vault, export PNG, persistent in localStorage
+- **Agent tool**: `drawOnCanvas` — agent can sketch diagrams via `{tool, color, points, text}`
+- **Event**: `frontendai:canvas-update` — live update when agent draws
+- Try: "draw a diagram of frontend AI architecture"
 
-### 🧠 Real Embeddings + Memory Graph
-- **Real embeddings**: `Xenova/all-MiniLM-L6-v2` (22MB, 384-dim) via transformers.js, ONNX WASM, cached
-- Fallback pseudo-embeddings if model not loaded
-- **Memory Graph**: Force-directed canvas graph, nodes = memories/notes, edges = cosine similarity >0.6 or tag overlap, physics simulation (repulsion + springs), click to inspect, 100% local
+### 🐍 Python WASM via Pyodide (New)
+- **PythonREPL**: Python 3.12 in browser via Pyodide WASM (10MB + stdlib)
+- **micropip**: Install pure Python packages (numpy, pandas, etc) via CDN, no server
+- **Tool**: `executePython` — agent can run Python code, returns output + result
+- **REPL UI**: Code editor + output pane, package installer, clear, run
+- Try: "run python to calculate fibonacci" or use Python tab directly
+
+### Previous: V3
+- **Memory Graph**: Force-directed canvas, nodes=memories/notes, edges=cosine similarity >0.6, physics
+- **Whisper tiny.en** (40MB) local STT via transformers.js WASM
+- **Vision**: screenshot (html2canvas) + local ViT-GPT2 + BYOK GPT-4o vision + WebLLM LLaVA
+
+### Previous: V2
+- **Voice**: Web Speech API STT + TTS, Voice tab with waveform
+- **Vision**: Screenshot + captioning
+- **Real embeddings**: all-MiniLM-L6-v2 384-dim
+
+### Previous: V1
+- Core ReAct loop, 12 tools, IndexedDB vault, floating OS
 
 ## 🏗️ Architecture (All Frontend)
 
-### 1. LLM Layer — Switchable Brains
-- **Mock** (default): Simulated ReAct for demo, no API needed
-- **WebLLM**: Llama-3.2 1B/3B, Phi-3.5-mini, Gemma-2 2B + LLaVA vision via WebGPU (100% offline)
-- **BYOK**: OpenAI, Groq, OpenRouter — direct `fetch()` from browser, no proxy, supports vision
-- **Ollama**: `http://localhost:11434` bridge
-- **Transformers.js**: Embeddings (384-dim) + Vision (ViT-GPT2) + Whisper (STT)
+### 1. LLM Layer
+- **Mock** (default), **WebLLM** (Llama 3.2, Phi-3.5, LLaVA vision), **BYOK** (OpenAI, Groq), **Ollama**
 
-### 2. Tool System (16 tools, all browser APIs)
-- **Page**: `readPage`, `queryDOM`, `highlightElement`, `extractArticle`, `captureScreenshot`, `analyzeImage`
+### 2. Tool System (18 tools)
+- **Page**: `readPage`, `queryDOM`, `highlightElement`, `extractArticle`, `captureScreenshot`, `analyzeImage`, `drawOnCanvas`
 - **Productivity**: `createNote`, `createTask`, `searchMemory`, `remember`
 - **System**: `getTime`, `clipboardWrite`, `notify`, `speak`
-- **Code**: `executeJS` (sandboxed), `analyzePageJS`
+- **Code**: `executeJS`, `executePython`, `analyzePageJS`
 - **Agent**: `setAutonomy`, `spawnSubAgent`
 
-### 3. Memory — Vector Vault in IndexedDB
-- Dexie DB: `memories`, `notes`, `tasks`, `messages`
-- Real embeddings (384-dim) → cosine similarity, or pseudo fallback (64-dim)
-- Graph visualization: physics + similarity edges
-- Importance scoring, tags, export/import brain JSON
+### 3. Memory
+- Dexie DB + real 384-dim embeddings + graph visualization
+- Canvas drawings in localStorage, notes in IndexedDB
 
 ### 4. UI — Floating OS
-- **AgentOrb**: Breathing, orbiting dots when thinking, thought bubble, voice pulse
-- **AgentDock**: 11 tabs — Chat, Vision, Voice, Whisper, Graph, Mind, Actions, Vault, Notes, Tasks, OS
+- **AgentOrb**: Breathing, mood badge, Zzz animation, orbiting dots, thought bubble
+- **AgentDock**: 13 tabs — Chat, Vision, Voice, Whisper, Canvas, Python, Graph, Mind, Actions, Vault, Notes, Tasks, OS
 - **CommandPalette**: `⌘K`
-- Glassmorphism, grid bg, mouse glow
 
 ### 5. Privacy
 - No backend, no cookies, no telemetry
-- API keys in localStorage only, screenshots in sessionStorage, audio never uploaded
-- PWA-ready, offline after models cached
+- Keys in localStorage, screenshots in sessionStorage, audio never uploaded, Python runs in WASM
 
 ## 🚀 Quick Start
 
@@ -75,77 +83,34 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173
-
 Try:
-- "Read this page and summarize"
 - "Take screenshot and analyze"
-- "Remember my name is Alex"
-- "Search my memory for rust"
-- "Speak hello in voice mode"
-- Click mic → speak → auto transcribe
-- Vision tab → screenshot → BYOK GPT-4o vision
-
-## 🗺️ Roadmap — What's Next
-
-### Phase 1: Companion (Done: voice, vision, embeddings, graph)
-- [x] Voice: Web Speech API + Whisper
-- [x] Vision: screenshot + local + BYOK + WebLLM
-- [x] Real embeddings + graph
-- [ ] Idle behaviors: boredom → cleanup, curiosity → reads page
-- [ ] Sleep/wake + persona editor
-
-### Phase 2: Deep Page OS
-- [ ] Shadow DOM overlay to annotate
-- [ ] Click/type automation
-- [ ] Form autofill from memory
-- [ ] Tab manager
-
-### Phase 3: Productivity Superpowers
-- [ ] Notes backlinks graph (Obsidian-like) — graph done for memories, extend to notes
-- [ ] Canvas: Excalidraw thinking board
-- [ ] File System Access API vault
-
-### Phase 4: Tool Universe
-- [ ] Web Workers for sub-agents
-- [ ] WASM Python via Pyodide
-- [ ] WebRTC P2P swarm
+- "Draw a diagram of my vault"
+- "Run python to plot a chart" (needs matplotlib via micropip)
+- "Remember my name is Alex" → Graph tab → see connections
+- Mic → speak → Whisper local transcribe
+- Leave idle 1min → companion gets bored → suggests action
 
 ## 📁 Structure
 
 ```
 src/
   agent/
-    types.ts
-    llm/ adapter, mock, openai, webllm
-    tools/ definitions, executors
-    memory/ db.ts (Dexie) + embeddings.ts (real 384-dim)
-    core/ loop.ts (ReAct)
+    tools/ definitions (18), executors (JS, Python, Canvas, Vision, Voice)
+    memory/ db.ts + embeddings.ts
+    core/ loop.ts
   components/
-    AgentOrb, AgentDock, Chat, ThoughtStream, ToolTimeline, MemoryVault, VisionPanel, VoiceControl, WhisperControl, MemoryGraph, CommandPalette
-    Productivity/ Notes, Tasks
-    Settings/ ModelSwitcher
-  hooks/ useAgent, useVoice, useWhisper
-  lib/ utils
+    AgentOrb (mood), AgentDock (13 tabs), Chat, VisionPanel, VoiceControl, WhisperControl, CanvasBoard, PythonREPL, MemoryGraph, ...
+  hooks/ useAgent, useVoice, useWhisper, useCompanion, usePyodide
 ```
 
-## 💡 Why Frontend-Only is Powerful
+## 🎯 Evolution
 
-- **Privacy**: Data never leaves device
-- **Offline**: Works on plane after model download
-- **No infra cost**: No backend to scale
-- **Feels alive**: Instant, no latency, lives in tab
-- **Hackable**: Inspect IndexedDB, export brain
-
-Built with Vite, React, Tailwind v4, Framer Motion, Dexie, Lucide, html2canvas, @huggingface/transformers.
-
-## 🎯 What You Asked
-
-> "this is gonna be about ai agent which lives in frontend completely so what do u think we should add"
-
-We added:
-- **V1**: Core ReAct loop, 12 tools, IndexedDB vault, floating OS, mock + WebLLM + BYOK
-- **V2**: Voice (STT/TTS), Vision (screenshot + captioning), Real embeddings (384-dim)
-- **V3**: Memory graph (force-directed), Whisper local STT, BYOK vision (GPT-4o), WebLLM LLaVA
+- **V1**: Core OS, 12 tools, floating OS
+- **V2**: Voice, Vision, Real embeddings
+- **V3**: Memory graph, Whisper, BYOK vision, LLaVA
+- **V4**: Companion behaviors (idle/bored/sleepy/curious), Canvas whiteboard, Python WASM
 
 All 100% frontend, no backend, ever.
+
+Built with Vite, React, Tailwind v4, Framer Motion, Dexie, html2canvas, @huggingface/transformers, Pyodide.
