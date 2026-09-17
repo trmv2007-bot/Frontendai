@@ -55,6 +55,11 @@ FrontendAI is a fully autonomous agent OS that runs on WebGPU, IndexedDB, and br
 
 ### 1. LLM Layer
 - **Mock** (default), **WebLLM** (Llama 3.2, Phi-3.5, LLaVA vision), **BYOK** (OpenAI, Groq), **Ollama**
+- The WebLLM runtime is fetched as ESM at runtime (jsDelivr, then esm.sh) — same as pyodide and
+  onnxruntime-wasm — so it is never bundled and never a build-time dependency. Pin a version in
+  `src/agent/llm/webllmAdapter.ts` (`WEBLLM_VERSION`), or self-host it with
+  `localStorage['frontendai:webllm.url']`. Prefer a bundled copy? `npm i @mlc-ai/web-llm` and
+  change the specifier in `loadWebLLMModule()` back to the bare package name.
 
 ### 2. Tool System (18 tools)
 - **Page**: `readPage`, `queryDOM`, `highlightElement`, `extractArticle`, `captureScreenshot`, `analyzeImage`, `drawOnCanvas`

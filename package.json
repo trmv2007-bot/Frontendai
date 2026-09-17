@@ -18,7 +18,6 @@
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.0",
-    "@mlc-ai/web-llm": "^0.2.85",
     "@webcontainer/api": "^1.6.4",
     "clsx": "^2.1.1",
     "dexie": "^4.4.6",
