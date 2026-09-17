@@ -1,0 +1,78 @@
+/* FrontendAI OS — Content Script Styles */
+#frontendai-orb {
+  position: fixed !important;
+  bottom: 24px !important;
+  right: 24px !important;
+  width: 56px !important;
+  height: 56px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #8b5cf6, #ec4899) !important;
+  box-shadow: 0 8px 32px rgba(139,92,246,0.4), 0 0 0 1px rgba(255,255,255,0.1) inset !important;
+  z-index: 2147483646 !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: none !important;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
+  user-select: none !important;
+}
+
+#frontendai-orb:hover {
+  transform: scale(1.1) !important;
+  box-shadow: 0 12px 40px rgba(139,92,246,0.5), 0 0 0 1px rgba(255,255,255,0.15) inset !important;
+}
+
+#frontendai-orb:active {
+  transform: scale(0.95) !important;
+}
+
+#frontendai-orb svg {
+  width: 28px !important;
+  height: 28px !important;
+  color: white !important;
+}
+
+#frontendai-iframe-container {
+  position: fixed !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: min(520px, 100vw) !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  z-index: 2147483647 !important;
+  border: none !important;
+  border-left: 1px solid #1e1e2e !important;
+  box-shadow: -20px 0 80px rgba(0,0,0,0.8) !important;
+  background: #0a0a0f !important;
+  transform: translateX(100%) !important;
+  transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1) !important;
+  overflow: hidden !important;
+}
+
+#frontendai-iframe-container.open {
+  transform: translateX(0) !important;
+}
+
+#frontendai-iframe {
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  background: #0a0a0f !important;
+}
+
+#frontendai-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(0,0,0,0.6) !important;
+  backdrop-filter: blur(2px) !important;
+  z-index: 2147483646 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: opacity 0.3s ease !important;
+}
+
+#frontendai-backdrop.open {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}

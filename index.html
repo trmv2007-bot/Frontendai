@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#8b5cf6" />
+    <meta name="background-color" content="#0a0a0f" />
+    <meta name="description" content="FrontendAI OS — 100% frontend AI assistant OS. Private, local, no backend. Chat, voice-to-voice, vision, canvas, Python, Node, files, P2P swarm, CRDT sync, multi-agent team, RAG, plugins, voice clone." />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="FrontendAI OS" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="FrontendAI OS" />
+    <meta property="og:title" content="FrontendAI OS — 100% Frontend AI" />
+    <meta property="og:description" content="The OS that lives in your browser. No backend, 100% private." />
+    <meta property="og:type" content="website" />
+    <title>FrontendAI OS — 100% Frontend AI</title>
+    <style>
+      html { background: #0a0a0f; }
+      #root:empty::before {
+        content: 'Loading FrontendAI OS...';
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        color: #8b5cf6;
+        font-family: monospace;
+        font-size: 14px;
+        letter-spacing: 0.1em;
+        animation: pulse 1.5s infinite;
+      }
+      @keyframes pulse { 0%,100% { opacity: 0.5 } 50% { opacity: 1 } }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <noscript>
+      <div style="display:flex;align-items:center;justify-content:center;height:100vh;background:#0a0a0f;color:#fff;font-family:monospace;padding:20px;text-align:center">
+        FrontendAI OS requires JavaScript. It's 100% frontend — no backend, all local. Please enable JS.
+      </div>
+    </noscript>
+  </body>
+</html>
