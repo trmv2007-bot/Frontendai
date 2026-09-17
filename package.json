@@ -23,7 +23,8 @@
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "rolldown": "^1.2.9",
-    "tailwind-merge": "^3.7.0"
+    "tailwind-merge": "^3.7.0",
+    "yjs": "^13.6.32"
   },
   "devDependencies": {
     "@types/dom-speech-recognition": "^0.0.12",
