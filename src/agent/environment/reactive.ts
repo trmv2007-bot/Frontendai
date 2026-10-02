@@ -8,7 +8,7 @@ export function useEnvironmentContext() {
 
   useEffect(() => {
     const refresh = () => setContext(contextEngine.getContext())
-    const unsubscribe = agentEventBus.subscribe(() => refresh())
+    const unsubscribe = agentEventBus.on('*', refresh)
     refresh()
     return unsubscribe
   }, [])
@@ -17,5 +17,5 @@ export function useEnvironmentContext() {
 }
 
 export function emitEnvironmentEvent<T>(type: AgentEvent['type'], payload?: T, source = 'frontend') {
-  return agentEventBus.emit({ type, source, payload })
+  return agentEventBus.emit(type, payload, source)
 }
