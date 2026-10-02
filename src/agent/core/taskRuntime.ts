@@ -29,6 +29,8 @@ export interface AgentTask {
 
 export type TaskListener = (task: AgentTask) => void
 
+const terminalStatuses = new Set<TaskStatus>(['completed', 'stopped', 'failed'])
+
 export class TaskRuntime {
   private task?: AgentTask
   private listeners = new Set<TaskListener>()
@@ -53,7 +55,7 @@ export class TaskRuntime {
   }
 
   addStep(title: string, description?: string) {
-    if (!this.task) return undefined
+    if (!this.task || terminalStatuses.has(this.task.status)) return undefined
     const existing = this.task.steps.find(step => step.title === title && step.status === 'pending')
     if (existing) return existing.id
     const step: TaskStep = { id: uid(), title, description, status: 'pending' }
@@ -63,53 +65,70 @@ export class TaskRuntime {
   }
 
   setPlan(steps: Array<Pick<TaskStep, 'title' | 'description'>>) {
-    if (!this.task) return
+    if (!this.task || terminalStatuses.has(this.task.status)) return
     this.task.steps = steps.map(step => ({ ...step, id: uid(), status: 'pending' }))
+    this.task.status = steps.length ? 'running' : 'completed'
+    this.touch()
+    if (!steps.length) agentEventBus.emit('task_completed', { taskId: this.task.id }, 'agent')
+  }
+
+  beginStep(stepId: string) {
+    if (!this.task || terminalStatuses.has(this.task.status) || this.task.status === 'paused') return
+    const step = this.task.steps.find(item => item.id === stepId)
+    if (!step || step.status !== 'pending') return
+    step.status = 'running'
+    step.startedAt = Date.now()
     this.task.status = 'running'
     this.touch()
   }
 
-  beginStep(stepId: string) {
-    if (!this.task || this.task.status === 'stopped' || this.task.status === 'paused') return
-    const step = this.task.steps.find(item => item.id === stepId)
-    if (!step) return
-    step.status = 'running'; step.startedAt = Date.now(); this.task.status = 'running'; this.touch()
-  }
-
   completeStep(stepId: string, result?: unknown) {
-    if (!this.task) return
+    if (!this.task || terminalStatuses.has(this.task.status) || this.task.status === 'paused') return
     const step = this.task.steps.find(item => item.id === stepId)
-    if (!step) return
-    step.status = 'success'; step.result = result; step.completedAt = Date.now(); this.touch()
+    if (!step || step.status !== 'running') return
+    step.status = 'success'
+    step.result = result
+    step.completedAt = Date.now()
+    this.touch()
+    if (this.task.steps.length > 0 && this.task.steps.every(item => ['success', 'skipped'].includes(item.status))) {
+      this.complete()
+    }
   }
 
   failStep(stepId: string, error: string) {
-    if (!this.task) return
+    if (!this.task || terminalStatuses.has(this.task.status)) return
     const step = this.task.steps.find(item => item.id === stepId)
-    if (!step) return
-    step.status = 'error'; step.error = error; step.completedAt = Date.now(); this.task.status = 'failed'; this.touch()
+    if (!step || step.status !== 'running') return
+    step.status = 'error'
+    step.error = error
+    step.completedAt = Date.now()
+    this.task.status = 'failed'
+    this.touch()
   }
 
   pause() {
     if (!this.task || !['planning', 'running'].includes(this.task.status)) return
-    this.task.status = 'paused'; this.touch()
+    this.task.status = 'paused'
+    this.touch()
     agentEventBus.emit('task_paused', { taskId: this.task.id }, 'agent')
   }
 
   resume() {
     if (!this.task || this.task.status !== 'paused') return
-    this.task.status = 'running'; this.touch()
+    this.task.status = 'running'
+    this.touch()
     agentEventBus.emit('task_resumed', { taskId: this.task.id }, 'agent')
   }
 
   stop() {
-    if (!this.task || ['completed', 'stopped'].includes(this.task.status)) return
-    this.task.status = 'stopped'; this.touch()
+    if (!this.task || terminalStatuses.has(this.task.status)) return
+    this.task.status = 'stopped'
+    this.touch()
     agentEventBus.emit('task_stopped', { taskId: this.task.id }, 'agent')
   }
 
   complete() {
-    if (!this.task) return
+    if (!this.task || terminalStatuses.has(this.task.status)) return
     this.task.status = 'completed'
     this.task.steps.forEach(step => { if (step.status === 'pending') step.status = 'skipped' })
     this.touch()
@@ -138,7 +157,8 @@ export class TaskRuntime {
 
   private notify() {
     if (!this.task) return
-    const snapshot = this.snapshot(); this.listeners.forEach(listener => listener(snapshot))
+    const snapshot = this.snapshot()
+    this.listeners.forEach(listener => listener(snapshot))
   }
 
   private snapshot(): AgentTask {
