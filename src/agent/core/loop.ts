@@ -8,6 +8,28 @@ import { activityTimeline } from './activity'
 import { actionRegistry } from '../tools/registry'
 import { memoryLayers } from '../memory/layers'
 
+const COMMON_SITES: Record<string, string> = {
+  youtube: 'https://www.youtube.com/',
+  google: 'https://www.google.com/',
+  gmail: 'https://mail.google.com/',
+  github: 'https://github.com/',
+  reddit: 'https://www.reddit.com/',
+  wikipedia: 'https://www.wikipedia.org/',
+  chatgpt: 'https://chatgpt.com/',
+  openai: 'https://openai.com/'
+}
+
+function requestedExternalUrl(input: string): string | null {
+  const text = input.trim().toLowerCase()
+  const match = text.match(/^(?:please\s+)?(?:open|go to|visit|launch)\s+(.+?)\s*[.!?]?$/i)
+  if (!match) return null
+  const target = match[1].trim().replace(/^https?:\/\//, '').replace(/\/$/, '')
+  const key = target.replace(/^www\./, '')
+  if (COMMON_SITES[key]) return COMMON_SITES[key]
+  if (/^[a-z0-9.-]+\.[a-z]{2,}(?:\/.*)?$/i.test(target)) return `https://${target}`
+  return null
+}
+
 export class AgentLoop {
   messages: Message[] = []
   state: AgentState
@@ -50,8 +72,35 @@ export class AgentLoop {
     return registered.length ? registered : this.tools
   }
 
+  private handleExplicitBrowserCommand(content: string): boolean {
+    const url = requestedExternalUrl(content)
+    if (!url || typeof window === 'undefined') return false
+
+    // Must happen synchronously from the user's submit/click event so browsers
+    // do not treat the new tab as a popup created by an async model response.
+    const popup = window.open(url, '_blank', 'noopener,noreferrer')
+    if (!popup) {
+      // If popup blocking prevents a new tab, use the current tab rather than
+      // claiming that navigation happened when it did not.
+      window.location.assign(url)
+    }
+    return true
+  }
+
   async sendUserMessage(content: string, mode: TaskMode = this.state.autonomy >= 3 ? 'autonomous' : 'assist') {
     taskRuntime.start(content, mode)
+
+    // Handle explicit navigation before the first await. This preserves the
+    // browser's user-activation token required by window.open().
+    if (this.handleExplicitBrowserCommand(content)) {
+      const userMsg: Message = { id: uid(), role: 'user', content, timestamp: Date.now() }
+      const assistantMsg: Message = { id: uid(), role: 'assistant', content: `Opening ${requestedExternalUrl(content)}.`, timestamp: Date.now() }
+      this.setMessages([...this.messages, userMsg, assistantMsg])
+      taskRuntime.complete()
+      this.setState({ status: 'idle', currentThought: undefined, currentTool: undefined })
+      return
+    }
+
     await memoryLayers.remember('short-term', `User task: ${content}`, { importance: 0.8, source: 'agent-task' })
     const userMsg: Message = { id: uid(), role: 'user', content, timestamp: Date.now() }
     const newMsgs = [...this.messages, userMsg]; this.setMessages(newMsgs); await this.runLoop(newMsgs)
