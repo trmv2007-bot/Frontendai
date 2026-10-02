@@ -39,7 +39,7 @@ export class AgentLoop {
     const memories = objective ? await memoryLayers.retrieve({ text: objective, limit: 6 }) : []
     const contextMessage: Message = {
       id: `environment-${context.updatedAt}`, role: 'system', timestamp: context.updatedAt,
-      content: `FRONTEND ENVIRONMENT CONTEXT:\n${JSON.stringify({ route: context.route, page: context.page, activeProject: context.activeProject, selectedElement: context.selectedElement, openPanels: context.openPanels, activeTask: context.activeTask, availableActions: context.availableActions, recentActions: context.recentActions.slice(-8), relevantState: context.relevantState })}\n\nRELEVANT MEMORY:\n${JSON.stringify(memories.map(({ item, score }) => ({ layer: item.layer, type: item.type, content: item.content, score })))}`
+      content: `FRONTEND ENVIRONMENT CONTEXT:\n${JSON.stringify({ route: context.route, page: context.page, activeProject: context.activeProject, selectedElement: context.selectedElement, openPanels: context.openPanels, activeTask: context.activeTask, availableActions: context.availableActions, recentActions: context.recentActions.slice(-8), relevantState: context.relevantState })}\n\nRELEVANT MEMORY:\n${JSON.stringify(memories.map(memory => ({ layer: memory.layer, type: memory.type, content: memory.content, score: memory.score })))}`
     }
     return [contextMessage, ...messages]
   }
