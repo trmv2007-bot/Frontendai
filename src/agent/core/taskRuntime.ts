@@ -131,17 +131,8 @@ export class TaskRuntime {
     if (!this.task) return
     const task = this.snapshot()
     contextEngine.setContext({
-      activeTask: {
-        id: task.id,
-        objective: task.objective,
-        mode: task.mode,
-        status: task.status,
-        steps: task.steps.map(({ id, title, description, status, error }) => ({ id, title, description, status, error }))
-      },
-      relevantState: {
-        ...contextEngine.getContext().relevantState,
-        activeTask: task
-      }
+      activeTask: { id: task.id, objective: task.objective, status: task.status },
+      relevantState: { ...contextEngine.getContext().relevantState, activeTask: task }
     })
   }
 
