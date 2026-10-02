@@ -14,7 +14,8 @@
     "build:ext": "tsc -b && vite build && node tools/build-extension.js",
     "build:all": "tsc -b && vite build && node tools/build-single.js && node tools/build-extension.js",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:e2e": "node e2e/smoke.mjs"
   },
   "dependencies": {
     "@huggingface/transformers": "^4.3.0",
