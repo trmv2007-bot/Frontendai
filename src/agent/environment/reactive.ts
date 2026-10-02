@@ -10,7 +10,7 @@ export function useEnvironmentContext() {
     const refresh = () => setContext(contextEngine.getContext())
     const unsubscribe = agentEventBus.on('*', refresh)
     refresh()
-    return unsubscribe
+    return () => { unsubscribe() }
   }, [])
 
   return context
