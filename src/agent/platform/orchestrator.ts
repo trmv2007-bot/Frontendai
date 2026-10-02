@@ -48,7 +48,7 @@ export class FrontendAgentOrchestrator implements AgentOrchestrator {
     const report: VerificationReport = await verificationPipeline.run(checks)
     if (report.passed) goal.status = 'completed'
     else goal.status = 'needs_repair'
-    return { passed: report.passed, checks: report.checks, nextAction: report.next }
+    return { passed: report.passed, checks: report.checks, nextAction: report.next ?? 'ask_user' }
   }
 
   async replan(goalId: string, reason: string) {
