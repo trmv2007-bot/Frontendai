@@ -4,7 +4,10 @@ import { environmentGraph, type EnvironmentSnapshot } from '../agent/environment
 
 export function AgentEnvironmentPanel() {
   const [snapshot, setSnapshot] = useState<EnvironmentSnapshot>(() => environmentGraph.snapshot())
-  useEffect(() => environmentGraph.subscribe(setSnapshot), [])
+  useEffect(() => {
+    const unsubscribe = environmentGraph.subscribe(setSnapshot)
+    return () => { unsubscribe() }
+  }, [])
   return <div className="flex-1 overflow-y-auto p-4 space-y-4">
     <div className="flex items-center justify-between"><div><h3 className="text-sm font-semibold">Environment</h3><p className="text-[11px] text-zinc-500 mt-1">Structured state the agent can reason about.</p></div><span className="text-[10px] font-mono text-zinc-600">rev {snapshot.revision}</span></div>
     <div className="grid grid-cols-2 gap-2"><div className="p-3 rounded-xl bg-[#12121a] border border-[#1e1e2e]"><Layers3 className="w-4 h-4 text-violet-400" /><div className="mt-2 text-lg font-semibold">{snapshot.nodes.length}</div><div className="text-[10px] text-zinc-500">nodes</div></div><div className="p-3 rounded-xl bg-[#12121a] border border-[#1e1e2e]"><GitBranch className="w-4 h-4 text-emerald-400" /><div className="mt-2 text-lg font-semibold">{snapshot.edges.length}</div><div className="text-[10px] text-zinc-500">relations</div></div></div>
