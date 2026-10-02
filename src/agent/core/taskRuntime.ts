@@ -47,6 +47,7 @@ export class TaskRuntime {
     const now = Date.now()
     this.task = { id: uid(), objective, mode, status: 'planning', steps: steps.map(step => ({ ...step, id: uid(), status: 'pending' })), createdAt: now, updatedAt: now }
     taskReplay.append(this.task.id, 'task', 'Task started', objective, { mode })
+    agentPresence.reset()
     agentPresence.transition('observing')
     this.syncContext()
     agentEventBus.emit('task_started', { taskId: this.task.id, objective, mode }, 'agent')
