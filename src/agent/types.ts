@@ -33,8 +33,7 @@ export interface ToolDefinition {
   needsConfirmation?: boolean
 }
 
-export type AgentStatus = 'idle' | 'thinking' | 'acting' | 'observing' | 'sleeping' | 'error'
-
+export type AgentStatus = 'idle' | 'thinking' | 'acting' | 'observing' | 'sleeping' | 'error' | 'paused'
 export type AutonomyLevel = 0 | 1 | 2 | 3 // 0=ask always, 1=confirm risky, 2=auto safe, 3=full auto
 
 export interface AgentState {
@@ -44,6 +43,9 @@ export interface AgentState {
   autonomy: AutonomyLevel
   memoryCount: number
   isOnline: boolean
+  taskId?: string
+  taskStatus?: 'planning' | 'running' | 'paused' | 'completed' | 'stopped' | 'failed'
+  taskMode?: 'assist' | 'autonomous'
 }
 
 export interface MemoryItem {
