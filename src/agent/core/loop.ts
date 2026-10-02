@@ -20,6 +20,7 @@ export class AgentLoop {
 
   constructor(adapter: LLMAdapter, tools: ToolDefinition[], contextEngine?: ContextEngine) {
     this.adapter = adapter; this.tools = tools; this.contextEngine = contextEngine
+    tools.forEach(tool => actionRegistry.registerTool(tool))
     this.state = { status: 'idle', autonomy: (parseInt(localStorage.getItem('frontendai_autonomy') || '2') as any) || 2, memoryCount: 0, isOnline: true }
     this.taskUnsubscribe = taskRuntime.subscribe(task => {
       this.setState({ taskId: task.id, taskStatus: task.status, taskMode: task.mode, status: task.status === 'paused' ? 'paused' : this.state.status })
