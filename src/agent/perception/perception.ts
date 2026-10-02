@@ -12,7 +12,12 @@ export class StructuredPerception implements PerceptionProvider {
 }
 
 export class CompositePerception implements PerceptionProvider {
-  constructor(private providers: PerceptionProvider[]) {}
+  private readonly providers: PerceptionProvider[]
+
+  constructor(providers: PerceptionProvider[]) {
+    this.providers = providers
+  }
+
   async perceive(input: PerceptionInput): Promise<PerceptionResult> {
     const results = await Promise.all(this.providers.map(provider => provider.perceive(input)))
     return { summary: results.map(r => r.summary).filter(Boolean).join(' · '), targets: [...new Set(results.flatMap(r => r.targets))], signals: results.flatMap(r => r.signals) }
