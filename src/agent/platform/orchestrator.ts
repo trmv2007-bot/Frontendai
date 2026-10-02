@@ -25,7 +25,7 @@ export class FrontendAgentOrchestrator implements AgentOrchestrator {
 
   async plan(goalId: string) {
     const goal = this.require(goalId)
-    const verbs = goal.objective.match(/\\b(build|create|fix|debug|test|compare|analyze|design|plan|update|deploy|review)\\b/gi) ?? []
+    const verbs = goal.objective.match(/\b(build|create|fix|debug|test|compare|analyze|design|plan|update|deploy|review)\b/gi) ?? []
     goal.steps = ['Inspect the relevant frontend environment', verbs.length ? `Perform: ${verbs[0].toLowerCase()}` : 'Execute the requested objective', 'Verify the result']
     goal.status = 'planned'
     return [...goal.steps]
