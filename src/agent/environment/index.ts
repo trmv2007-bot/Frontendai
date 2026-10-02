@@ -1,6 +1,8 @@
 export * from './types'
 export * from './eventBus'
 export * from './contextEngine'
+export * from './reactive'
+export * from './browserProvider'
 
 import type { ToolDefinition } from '../types'
 import type { AgentEvent } from './types'
@@ -34,12 +36,13 @@ export class EnvironmentToolRegistry {
     if (!tool) throw new Error(`Environment tool not found: ${name}`)
     if (tool.available && !(await tool.available())) throw new Error(`Environment tool unavailable: ${name}`)
     const started = Date.now()
+    agentEventBus.emit('action_started', { tool: name, args }, 'agent')
     try {
       const result = await tool.execute(args)
-      agentEventBus.emit('user_clicked', { tool: name, duration: Date.now() - started, result }, 'agent')
+      agentEventBus.emit('action_completed', { tool: name, duration: Date.now() - started, result }, 'agent')
       return result
     } catch (error) {
-      agentEventBus.emit('error_detected', { tool: name, error: error instanceof Error ? error.message : String(error) }, 'agent')
+      agentEventBus.emit('action_failed', { tool: name, duration: Date.now() - started, error: error instanceof Error ? error.message : String(error) }, 'agent')
       throw error
     }
   }
