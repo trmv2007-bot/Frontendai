@@ -1,5 +1,6 @@
 import { uid } from '../../lib/utils'
 import { agentEventBus } from '../environment/eventBus'
+import { contextEngine } from '../environment/contextEngine'
 
 export type TaskMode = 'assist' | 'autonomous'
 export type TaskStatus = 'planning' | 'running' | 'paused' | 'completed' | 'stopped' | 'failed'
@@ -45,6 +46,7 @@ export class TaskRuntime {
       steps: steps.map(step => ({ ...step, id: uid(), status: 'pending' })),
       createdAt: now, updatedAt: now
     }
+    this.syncContext()
     agentEventBus.emit('task_started', { taskId: this.task.id, objective, mode }, 'agent')
     this.notify()
     return this.snapshot()
@@ -68,7 +70,7 @@ export class TaskRuntime {
   }
 
   beginStep(stepId: string) {
-    if (!this.task || this.task.status === 'stopped') return
+    if (!this.task || this.task.status === 'stopped' || this.task.status === 'paused') return
     const step = this.task.steps.find(item => item.id === stepId)
     if (!step) return
     step.status = 'running'; step.startedAt = Date.now(); this.task.status = 'running'; this.touch()
@@ -120,7 +122,27 @@ export class TaskRuntime {
 
   private touch() {
     if (!this.task) return
-    this.task.updatedAt = Date.now(); this.notify()
+    this.task.updatedAt = Date.now()
+    this.syncContext()
+    this.notify()
+  }
+
+  private syncContext() {
+    if (!this.task) return
+    const task = this.snapshot()
+    contextEngine.setContext({
+      activeTask: {
+        id: task.id,
+        objective: task.objective,
+        mode: task.mode,
+        status: task.status,
+        steps: task.steps.map(({ id, title, description, status, error }) => ({ id, title, description, status, error }))
+      },
+      relevantState: {
+        ...contextEngine.getContext().relevantState,
+        activeTask: task
+      }
+    })
   }
 
   private notify() {
