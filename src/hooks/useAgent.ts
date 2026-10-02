@@ -6,6 +6,7 @@ import { OpenAIAdapter } from '../agent/llm/openaiAdapter'
 import { TOOL_DEFINITIONS } from '../agent/tools/definitions'
 import { actionRegistry } from '../agent/tools/registry'
 import { contextEngine } from '../agent/environment/contextEngine'
+import { useEnvironmentBridge } from './useEnvironmentBridge'
 import type { AgentState, Message, LLMConfig, LLMProvider } from '../agent/types'
 import { db } from '../agent/memory/db'
 
@@ -23,6 +24,7 @@ function createAdapter(provider: LLMProvider, model: string, apiKey?: string, ba
 }
 
 export function useAgent() {
+  useEnvironmentBridge()
   const [config, setConfig] = useState<LLMConfig>(() => {
     const saved = localStorage.getItem('frontendai_llm')
     return saved ? JSON.parse(saved) : DEFAULT_CONFIG
@@ -32,25 +34,18 @@ export function useAgent() {
   const loopRef = useRef<AgentLoop | null>(null)
 
   useEffect(() => {
-    // Register the application's capabilities once. The model only receives
-    // definitions; execution is always routed through the registry.
     const unregister = TOOL_DEFINITIONS.map(definition => actionRegistry.registerTool(definition))
     contextEngine.setContext({ availableActions: TOOL_DEFINITIONS.map(tool => tool.name) })
 
     const adapter = createAdapter(config.provider, config.model, config.apiKey, config.baseUrl)
     const loop = new AgentLoop(adapter, TOOL_DEFINITIONS, contextEngine)
-
-    db.messages.toArray().then(msgs => {
-      if (msgs.length) setMessages(msgs.sort((a, b) => a.timestamp - b.timestamp))
-    })
+    db.messages.toArray().then(msgs => { if (msgs.length) setMessages(msgs.sort((a, b) => a.timestamp - b.timestamp)) })
 
     const unsubState = loop.subscribeState(setState)
     const unsubMsgs = loop.subscribeMessages(async (msgs) => {
       setMessages([...msgs])
       const last = msgs[msgs.length - 1]
-      if (last && !last.isStreaming) {
-        try { await db.messages.put(last) } catch {}
-      }
+      if (last && !last.isStreaming) { try { await db.messages.put(last) } catch {} }
     })
 
     loopRef.current = loop
@@ -68,10 +63,8 @@ export function useAgent() {
   const resume = () => loopRef.current?.resume()
   const stop = () => loopRef.current?.stop()
   const clear = async () => { await db.messages.clear(); loopRef.current?.clear() }
-
   const updateConfig = (patch: Partial<LLMConfig>) => {
-    const next = { ...config, ...patch }; setConfig(next)
-    localStorage.setItem('frontendai_llm', JSON.stringify(next))
+    const next = { ...config, ...patch }; setConfig(next); localStorage.setItem('frontendai_llm', JSON.stringify(next))
   }
 
   return { state, messages, send, pause, resume, stop, clear, config, updateConfig, loop: loopRef.current, contextEngine }
