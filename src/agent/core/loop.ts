@@ -1,8 +1,11 @@
 import type { Message, ToolDefinition, AgentState } from '../types'
 import type { LLMAdapter } from '../llm/adapter'
-import { TOOL_EXECUTORS } from '../tools/executors'
 import { uid } from '../../lib/utils'
 import type { ContextEngine } from '../environment/contextEngine'
+import { agentEventBus } from '../environment/eventBus'
+import { taskRuntime, type TaskMode } from './taskRuntime'
+import { activityTimeline } from './activity'
+import { actionRegistry } from '../tools/registry'
 
 export class AgentLoop {
   messages: Message[] = []
@@ -12,6 +15,7 @@ export class AgentLoop {
   private contextEngine?: ContextEngine
   private listeners: Set<(s: AgentState) => void> = new Set()
   private msgListeners: Set<(msgs: Message[]) => void> = new Set()
+  private taskUnsubscribe: () => void
 
   constructor(adapter: LLMAdapter, tools: ToolDefinition[], contextEngine?: ContextEngine) {
     this.adapter = adapter
@@ -23,15 +27,34 @@ export class AgentLoop {
       memoryCount: 0,
       isOnline: true
     }
+
+    // Keep the runtime state and the persistent agent presence synchronized.
+    this.taskUnsubscribe = taskRuntime.subscribe(task => {
+      this.setState({
+        taskId: task.id,
+        taskStatus: task.status,
+        taskMode: task.mode,
+        status: task.status === 'paused' ? 'paused' : this.state.status
+      })
+      this.contextEngine?.setContext({
+        activeTask: {
+          id: task.id,
+          objective: task.objective,
+          status: task.status
+        }
+      })
+    })
   }
 
   subscribeState(fn: (s: AgentState) => void) {
     this.listeners.add(fn)
+    fn(this.state)
     return () => this.listeners.delete(fn)
   }
 
   subscribeMessages(fn: (msgs: Message[]) => void) {
     this.msgListeners.add(fn)
+    fn(this.messages)
     return () => this.msgListeners.delete(fn)
   }
 
@@ -67,38 +90,61 @@ export class AgentLoop {
     return [contextMessage, ...messages]
   }
 
-  async sendUserMessage(content: string) {
+  async sendUserMessage(content: string, mode: TaskMode = this.state.autonomy >= 3 ? 'autonomous' : 'assist') {
+    taskRuntime.start(content, mode)
     const userMsg: Message = { id: uid(), role: 'user', content, timestamp: Date.now() }
     const newMsgs = [...this.messages, userMsg]
     this.setMessages(newMsgs)
     await this.runLoop(newMsgs)
   }
 
-  async runLoop(messages: Message[]) {
-    this.setState({ status: 'thinking', currentThought: 'Analyzing request and application state...' })
+  pause() {
+    taskRuntime.pause()
+    this.setState({ status: 'paused' })
+  }
 
-    const assistantMsg: Message = {
-      id: uid(),
-      role: 'assistant',
-      content: '',
-      timestamp: Date.now(),
-      isStreaming: true,
-      thought: '',
-      toolCalls: []
+  resume() {
+    taskRuntime.resume()
+    if (taskRuntime.getTask()?.status === 'running') this.setState({ status: 'thinking' })
+  }
+
+  stop() {
+    taskRuntime.stop()
+    this.setState({ status: 'idle', currentThought: undefined, currentTool: undefined })
+  }
+
+  getTask() {
+    return taskRuntime.getTask()
+  }
+
+  async runLoop(messages: Message[]) {
+    if (taskRuntime.isStopped()) return
+    while (taskRuntime.isPaused()) {
+      await new Promise(resolve => setTimeout(resolve, 100))
+      if (taskRuntime.isStopped()) return
     }
 
+    this.setState({ status: 'thinking', currentThought: 'Analyzing request and application state...' })
+    const assistantMsg: Message = {
+      id: uid(), role: 'assistant', content: '', timestamp: Date.now(), isStreaming: true, thought: '', toolCalls: []
+    }
     this.setMessages([...messages, assistantMsg])
 
     let fullText = ''
     let fullThought = ''
-    let pendingToolCalls: any[] = []
+    const pendingToolCalls: any[] = []
     const modelMessages = await this.buildModelMessages(messages)
 
     await this.adapter.streamChat(modelMessages, this.tools, async (chunk) => {
+      if (taskRuntime.isStopped()) return
+      while (taskRuntime.isPaused() && !taskRuntime.isStopped()) {
+        await new Promise(resolve => setTimeout(resolve, 100))
+      }
+
       if (chunk.thought) {
         fullThought += chunk.thought + '\n'
         assistantMsg.thought = fullThought
-        this.setState({ currentThought: chunk.thought })
+        this.setState({ currentThought: chunk.thought, status: 'thinking' })
         this.setMessages([...messages, { ...assistantMsg }])
       }
       if (chunk.text) {
@@ -123,36 +169,47 @@ export class AgentLoop {
       if (chunk.done) {
         assistantMsg.isStreaming = false
         const needsExecution = pendingToolCalls.filter(tc => !tc.result && tc.status === 'running')
-        if (needsExecution.length && this.adapter.name !== 'mock') {
+
+        if (needsExecution && needsExecution.length && this.adapter.name !== 'mock') {
           for (const tc of needsExecution) {
+            if (taskRuntime.isStopped()) return
+            while (taskRuntime.isPaused() && !taskRuntime.isStopped()) {
+              await new Promise(resolve => setTimeout(resolve, 100))
+            }
+
+            const step = taskRuntime.getTask()?.steps.find(s => s.title === tc.name)
+            const stepId = step?.id ?? taskRuntime.getTask()?.steps.at(-1)?.id
+            const activityId = activityTimeline.start(`Running ${tc.name}`, 'Executing application action', stepId)
+            if (stepId) taskRuntime.beginStep(stepId)
+
             try {
-              const exec = TOOL_EXECUTORS[tc.name]
-              if (exec) {
-                const res = await exec(tc.arguments)
-                tc.result = res
-                tc.status = 'success'
-                tc.duration = 100
-                const toolMsg: Message = {
-                  id: uid(),
-                  role: 'tool',
-                  content: JSON.stringify(res).slice(0, 4000),
-                  timestamp: Date.now(),
-                  toolCallId: tc.id
-                }
-                messages = [...messages, assistantMsg, toolMsg]
-                this.setMessages(messages)
-                await this.runLoop(messages)
-                return
+              const res = await actionRegistry.execute(tc.name, tc.arguments)
+              tc.result = res
+              tc.status = 'success'
+              tc.duration = 0
+              activityTimeline.finish(activityId, 'success')
+              if (stepId) taskRuntime.completeStep(stepId, res)
+
+              const toolMsg: Message = {
+                id: uid(), role: 'tool', content: JSON.stringify(res).slice(0, 4000), timestamp: Date.now(), toolCallId: tc.id
               }
-              tc.status = 'error'
-              tc.result = { error: 'Tool not found' }
+              messages = [...messages, assistantMsg, toolMsg]
+              agentEventBus.emit('user_clicked', { action: tc.name, arguments: tc.arguments }, 'agent')
+              this.setMessages(messages)
+              this.setState({ status: 'observing', currentTool: tc.name })
+              await this.runLoop(messages)
+              return
             } catch (e: any) {
               tc.status = 'error'
               tc.result = { error: e.message }
+              activityTimeline.finish(activityId, 'error', e.message)
+              if (stepId) taskRuntime.failStep(stepId, e.message)
             }
           }
         }
+
         this.setMessages([...messages, { ...assistantMsg, isStreaming: false }])
+        if (taskRuntime.getTask()?.status === 'running') taskRuntime.complete()
         this.setState({ status: 'idle', currentThought: undefined, currentTool: undefined })
       }
     })
@@ -164,5 +221,9 @@ export class AgentLoop {
 
   setAdapter(adapter: LLMAdapter) {
     this.adapter = adapter
+  }
+
+  destroy() {
+    this.taskUnsubscribe()
   }
 }
