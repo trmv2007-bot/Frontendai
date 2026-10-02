@@ -18,3 +18,13 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+      - name: Install Playwright
+        run: npm install --no-save --no-package-lock playwright@1.55.0
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start preview server
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/frontendai-preview.log 2>&1 &
+          sleep 5
+      - name: Run browser smoke test
+        run: npm run test:e2e
