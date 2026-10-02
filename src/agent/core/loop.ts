@@ -6,6 +6,7 @@ import { agentEventBus } from '../environment/eventBus'
 import { taskRuntime, type TaskMode } from './taskRuntime'
 import { activityTimeline } from './activity'
 import { actionRegistry } from '../tools/registry'
+import { memoryLayers } from '../memory/layers'
 
 export class AgentLoop {
   messages: Message[] = []
@@ -34,13 +35,18 @@ export class AgentLoop {
   private async buildModelMessages(messages: Message[]) {
     if (!this.contextEngine) return messages
     const context = await this.contextEngine.refresh()
-    const contextMessage: Message = { id: `environment-${context.updatedAt}`, role: 'system', timestamp: context.updatedAt,
-      content: `FRONTEND ENVIRONMENT CONTEXT:\n${JSON.stringify({ route: context.route, page: context.page, activeProject: context.activeProject, selectedElement: context.selectedElement, openPanels: context.openPanels, activeTask: context.activeTask, availableActions: context.availableActions, recentActions: context.recentActions.slice(-8), relevantState: context.relevantState })}` }
+    const objective = taskRuntime.getTask()?.objective || messages.filter(m => m.role === 'user').at(-1)?.content || ''
+    const memories = objective ? await memoryLayers.retrieve({ text: objective, limit: 6 }) : []
+    const contextMessage: Message = {
+      id: `environment-${context.updatedAt}`, role: 'system', timestamp: context.updatedAt,
+      content: `FRONTEND ENVIRONMENT CONTEXT:\n${JSON.stringify({ route: context.route, page: context.page, activeProject: context.activeProject, selectedElement: context.selectedElement, openPanels: context.openPanels, activeTask: context.activeTask, availableActions: context.availableActions, recentActions: context.recentActions.slice(-8), relevantState: context.relevantState })}\n\nRELEVANT MEMORY:\n${JSON.stringify(memories.map(({ item, score }) => ({ layer: item.layer, type: item.type, content: item.content, score })))}`
+    }
     return [contextMessage, ...messages]
   }
 
   async sendUserMessage(content: string, mode: TaskMode = this.state.autonomy >= 3 ? 'autonomous' : 'assist') {
     taskRuntime.start(content, mode)
+    await memoryLayers.remember('short-term', `User task: ${content}`, { importance: 0.8, source: 'agent-task' })
     const userMsg: Message = { id: uid(), role: 'user', content, timestamp: Date.now() }
     const newMsgs = [...this.messages, userMsg]; this.setMessages(newMsgs); await this.runLoop(newMsgs)
   }
@@ -81,8 +87,7 @@ export class AgentLoop {
             if (stepId) taskRuntime.beginStep(stepId)
             agentEventBus.emit('action_started', { taskId: taskRuntime.getTask()?.id, tool: tc.name, arguments: tc.arguments }, 'agent')
             try {
-              const startedAt = Date.now()
-              const res = await actionRegistry.execute(tc.name, tc.arguments)
+              const startedAt = Date.now(); const res = await actionRegistry.execute(tc.name, tc.arguments)
               tc.result = res; tc.status = 'success'; tc.duration = Date.now() - startedAt
               activityTimeline.finish(activityId, 'success'); if (stepId) taskRuntime.completeStep(stepId, res)
               agentEventBus.emit('action_completed', { taskId: taskRuntime.getTask()?.id, tool: tc.name, result: res }, 'agent')
