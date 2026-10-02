@@ -43,7 +43,7 @@ export class FrontendAgentOrchestrator implements AgentOrchestrator {
     const goal = this.require(goalId)
     const checks: VerificationCheck[] = [
       { name: 'Goal has an execution plan', run: () => goal.steps.length > 0 },
-      { name: 'Goal has success criteria', run: () => (goal.successCriteria?.length ?? 0) > 0 },
+      { name: 'Goal has success criteria', run: () => Boolean(goal.successCriteria?.length) },
     ]
     const report: VerificationReport = await verificationPipeline.run(checks)
     if (report.passed) goal.status = 'completed'
