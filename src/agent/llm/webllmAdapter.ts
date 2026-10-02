@@ -48,8 +48,14 @@ Your job is to help the user directly and naturally. Treat the user's message as
 - You are an application agent, not a tutorial explaining how an AI agent could behave.`
 
 function toChatMessage(message: Message) {
-  const role = message.role === 'system' ? 'system' : message.role === 'assistant' ? 'assistant' : 'user'
-  return { role, content: message.content }
+  return { role: message.role === 'assistant' ? 'assistant' as const : 'user' as const, content: message.content }
+}
+
+function normalizeMessages(messages: Message[]) {
+  const systemMessages = messages.filter(message => message.role === 'system').map(message => message.content.trim()).filter(Boolean)
+  const conversation = messages.filter(message => message.role !== 'system' && message.role !== 'tool').map(toChatMessage)
+  const system = [FRONTENDAI_SYSTEM_PROMPT, ...systemMessages.filter(content => content !== FRONTENDAI_SYSTEM_PROMPT)].join('\n\n')
+  return [{ role: 'system' as const, content: system }, ...conversation]
 }
 
 export class WebLLMAdapter implements LLMAdapter {
@@ -83,10 +89,7 @@ export class WebLLMAdapter implements LLMAdapter {
     }
 
     try {
-      const modelMessages = [
-        { role: 'system', content: FRONTENDAI_SYSTEM_PROMPT },
-        ...messages.filter(message => message.role !== 'tool').map(toChatMessage)
-      ]
+      const modelMessages = normalizeMessages(messages)
       const chunks = await this.engine.chat.completions.create({ messages: modelMessages, stream: true, temperature: 0.7 })
       for await (const chunk of chunks) {
         const text = chunk.choices[0]?.delta?.content
