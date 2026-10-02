@@ -20,11 +20,12 @@ try {
   await orb.click()
   await page.getByRole('heading', { name: 'FrontendAI OS' }).waitFor()
 
-  if (!await page.getByRole('button', { name: 'Autonomous' }).isVisible()) {
+  const autonomousButton = page.getByRole('button', { name: 'Autonomous', exact: true }).first()
+  if (!await autonomousButton.isVisible()) {
     throw new Error('Agent mode controls did not render')
   }
 
-  await page.getByRole('button', { name: 'Autonomous' }).click()
+  await autonomousButton.click()
   await page.getByRole('button', { name: 'Activity' }).click()
   await page.getByRole('button', { name: 'Vision' }).click()
   await page.getByRole('button', { name: 'Chat' }).click()
