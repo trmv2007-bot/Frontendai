@@ -44,6 +44,11 @@ export class AgentLoop {
     return [contextMessage, ...messages]
   }
 
+  private availableTools() {
+    const registered = actionRegistry.availableForEnvironment()
+    return registered.length ? registered : this.tools
+  }
+
   async sendUserMessage(content: string, mode: TaskMode = this.state.autonomy >= 3 ? 'autonomous' : 'assist') {
     taskRuntime.start(content, mode)
     await memoryLayers.remember('short-term', `User task: ${content}`, { importance: 0.8, source: 'agent-task' })
@@ -63,8 +68,9 @@ export class AgentLoop {
     this.setMessages([...messages, assistantMsg])
     let fullText = ''; let fullThought = ''; const pendingToolCalls: any[] = []
     const modelMessages = await this.buildModelMessages(messages)
+    const availableTools = this.availableTools()
 
-    await this.adapter.streamChat(modelMessages, this.tools, async (chunk) => {
+    await this.adapter.streamChat(modelMessages, availableTools, async (chunk) => {
       if (taskRuntime.isStopped()) return
       while (taskRuntime.isPaused() && !taskRuntime.isStopped()) await new Promise(resolve => setTimeout(resolve, 100))
       if (chunk.thought) { fullThought += chunk.thought + '\n'; assistantMsg.thought = fullThought; this.setState({ currentThought: chunk.thought, status: 'thinking' }); this.setMessages([...messages, { ...assistantMsg }]) }
@@ -82,7 +88,12 @@ export class AgentLoop {
           for (const tc of needsExecution) {
             if (taskRuntime.isStopped()) return
             while (taskRuntime.isPaused() && !taskRuntime.isStopped()) await new Promise(resolve => setTimeout(resolve, 100))
-            const stepId = taskRuntime.addStep(tc.name, `Execute ${tc.name}`)
+            const action = actionRegistry.get(tc.name)
+            if (!action) {
+              tc.status = 'error'; tc.result = { error: `Unknown action: ${tc.name}` }
+              continue
+            }
+            const stepId = taskRuntime.addStep(tc.name, action.description)
             const activityId = activityTimeline.start(`Running ${tc.name}`, 'Executing application action', stepId)
             if (stepId) taskRuntime.beginStep(stepId)
             agentEventBus.emit('action_started', { taskId: taskRuntime.getTask()?.id, tool: tc.name, arguments: tc.arguments }, 'agent')
@@ -97,8 +108,11 @@ export class AgentLoop {
             } catch (e: any) {
               tc.status = 'error'; tc.result = { error: e.message }; activityTimeline.finish(activityId, 'error', e.message); if (stepId) taskRuntime.failStep(stepId, e.message)
               agentEventBus.emit('action_failed', { taskId: taskRuntime.getTask()?.id, tool: tc.name, error: e.message }, 'agent')
+              const toolMsg: Message = { id: uid(), role: 'tool', content: JSON.stringify({ error: e.message }), timestamp: Date.now(), toolCallId: tc.id }
+              messages = [...messages, assistantMsg, toolMsg]
             }
           }
+          if (messages.length > this.messages.length) { this.setMessages(messages); this.setState({ status: 'observing' }); await this.runLoop(messages); return }
         }
         this.setMessages([...messages, { ...assistantMsg, isStreaming: false }])
         if (taskRuntime.getTask()?.status === 'running') taskRuntime.complete()
