@@ -4,6 +4,7 @@ import { MockAdapter } from '../agent/llm/mockAdapter'
 import { WebLLMAdapter } from '../agent/llm/webllmAdapter'
 import { OpenAIAdapter } from '../agent/llm/openaiAdapter'
 import { TOOL_DEFINITIONS } from '../agent/tools/definitions'
+import { contextEngine } from '../agent/environment/contextEngine'
 import type { AgentState, Message, LLMConfig, LLMProvider } from '../agent/types'
 import { db } from '../agent/memory/db'
 
@@ -38,18 +39,16 @@ export function useAgent() {
 
   useEffect(() => {
     const adapter = createAdapter(config.provider, config.model, config.apiKey, config.baseUrl)
-    const loop = new AgentLoop(adapter, TOOL_DEFINITIONS)
-    
-    // load persisted messages
+    const loop = new AgentLoop(adapter, TOOL_DEFINITIONS, contextEngine)
+
     db.messages.toArray().then(msgs => {
-      if (msgs.length) setMessages(msgs.sort((a,b)=>a.timestamp-b.timestamp))
+      if (msgs.length) setMessages(msgs.sort((a, b) => a.timestamp - b.timestamp))
     })
 
     const unsubState = loop.subscribeState(setState)
     const unsubMsgs = loop.subscribeMessages(async (msgs) => {
       setMessages([...msgs])
-      // persist
-      const last = msgs[msgs.length-1]
+      const last = msgs[msgs.length - 1]
       if (last && !last.isStreaming) {
         try { await db.messages.put(last) } catch {}
       }
@@ -57,7 +56,6 @@ export function useAgent() {
 
     loopRef.current = loop
 
-    // memory count
     db.memories.count().then(c => setState(s => ({ ...s, memoryCount: c })))
     const interval = setInterval(() => db.memories.count().then(c => setState(s => ({ ...s, memoryCount: c }))), 3000)
 
@@ -80,5 +78,5 @@ export function useAgent() {
     localStorage.setItem('frontendai_llm', JSON.stringify(next))
   }
 
-  return { state, messages, send, clear, config, updateConfig, loop: loopRef.current }
+  return { state, messages, send, clear, config, updateConfig, loop: loopRef.current, contextEngine }
 }
