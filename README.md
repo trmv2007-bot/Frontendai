@@ -1,133 +1,340 @@
-# FrontendAI OS — Agent that lives 100% in Frontend
+# FrontendAI OS — The AI Agent That Lives in Your Frontend
 
-> No backend. No tracking. The AI that never leaves your browser.
+> A browser-native agent runtime with a persistent visual presence, structured UI context, typed tools, memory, autonomy, and human control.
 
-FrontendAI is a fully autonomous agent OS that runs on WebGPU, IndexedDB, and browser APIs. It can **see, hear, speak, remember forever, draw, code in Python, manage notes/tasks** — all in your tab.
+FrontendAI is designed as an **agent that lives inside the frontend**, not as a chatbot bolted onto the side of an application. The browser UI is the agent's environment: it can observe structured application context, plan multi-step work, use registered tools, react to events, remember relevant information, and keep the human in control.
 
-**Live Demo:** Orb bottom-right → Chat, or press `⌘K`
+**Repository:** https://github.com/trmv2007-bot/Frontendai
 
-## 🧠 What it is
+## ✨ What FrontendAI Does
 
-- **General Assistant** + **Productivity OS** + **Creative Companion**
-- Lives as a floating orb (Floating OS + IDE Sidecar vibe)
-- ReAct loop: Thought → Action → Observation → Repeat
-- All execution in browser, no server
+- **Persistent agent presence** — a floating orb/agent UI that remains available across the app.
+- **Structured environment context** — route, visible UI, selected elements, open panels, recent events, active task, available actions, and relevant app state.
+- **Typed tool system** — discoverable tools with schemas, validation, handlers, results, errors, and permission/risk controls.
+- **Real task runtime** — supports multi-step task execution with planning, inspection, action, observation, validation, correction, and completion.
+- **Assist + Autonomous modes** — the user can choose how much control the agent has.
+- **Human-in-the-loop controls** — pause, stop, take control, resume, and safe task interruption.
+- **Activity visibility** — the agent exposes what it is doing through the UI instead of silently acting.
+- **Layered memory** — short-term, session, project, user, and tool memory with selective retrieval.
+- **Event-driven architecture** — frontend events can update agent context and drive reactive behavior.
+- **Task checkpoints** — task progress can be persisted and resumed safely.
+- **Browser-native execution** — application logic and agent infrastructure run in the frontend.
 
-## ✨ V4 Features — You kept saying "yes"
+## 🧠 Agent Runtime
 
-### 🧸 Companion Behaviors (New)
-- **Mood system**: `idle` → `curious` → `bored` → `sleepy` → `focused` based on idle time, tab visibility, agent status
-- **Idle detection**: 1min → bored suggestion, 2min → curious exploration, 5min → sleepy
-- **Tab sleep**: When tab hidden → Zzz animation, wake message on return
-- **Proactive nudges**: Suggests vault cleanup, graph view, reading page, drawing on canvas
-- **Orb**: Shows mood badge, Zzz floating animation when sleepy, thought bubble when thinking
-- **Toast**: Top-right companion thoughts (boredom, curiosity)
-- Hook: `useCompanion()` — tracks activity, visibility, mood
+FrontendAI follows an agent loop built around the environment rather than a chat transcript:
 
-### 🎨 Infinite Canvas Whiteboard (New)
-- **CanvasBoard**: 1200x800 canvas with grid, tools: pencil, rect, circle, text, eraser
-- **Features**: color picker, line width, undo, save to notes vault, export PNG, persistent in localStorage
-- **Agent tool**: `drawOnCanvas` — agent can sketch diagrams via `{tool, color, points, text}`
-- **Event**: `frontendai:canvas-update` — live update when agent draws
-- Try: "draw a diagram of frontend AI architecture"
+```
+Understand
+   ↓
+Plan
+   ↓
+Inspect
+   ↓
+Act
+   ↓
+Observe
+   ↓
+Validate
+   ↓
+Correct / Continue
+   ↓
+Complete
+```
 
-### 🐍 Python WASM via Pyodide (New)
-- **PythonREPL**: Python 3.12 in browser via Pyodide WASM (10MB + stdlib)
-- **micropip**: Install pure Python packages (numpy, pandas, etc) via CDN, no server
-- **Tool**: `executePython` — agent can run Python code, returns output + result
-- **REPL UI**: Code editor + output pane, package installer, clear, run
-- Try: "run python to calculate fibonacci" or use Python tab directly
+The runtime is intentionally separated from presentation. This makes the model/provider replaceable while the agent's environment, tools, memory, permissions, and task lifecycle remain application-level infrastructure.
 
-### Previous: V3
-- **Memory Graph**: Force-directed canvas, nodes=memories/notes, edges=cosine similarity >0.6, physics
-- **Whisper tiny.en** (40MB) local STT via transformers.js WASM
-- **Vision**: screenshot (html2canvas) + local ViT-GPT2 + BYOK GPT-4o vision + WebLLM LLaVA
+## 🏗️ Architecture
 
-### Previous: V2
-- **Voice**: Web Speech API STT + TTS, Voice tab with waveform
-- **Vision**: Screenshot + captioning
-- **Real embeddings**: all-MiniLM-L6-v2 384-dim
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     FrontendAI OS UI                        │
+│  Agent Orb · Agent Dock · Activity · Chat · Vision · Tools │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Environment / Context Engine               │
+│ route · UI · selection · panels · events · task · actions  │
+└────────────────────────────┬────────────────────────────────┘
+                             │
+                             ▼
+┌─────────────────────────────────────────────────────────────┐
+│                       Agent Runtime                         │
+│ Understand → Plan → Inspect → Act → Observe → Validate     │
+│ Pause · Resume · Stop · Checkpoint · Complete              │
+└───────────────┬─────────────────────────────┬───────────────┘
+                │                             │
+                ▼                             ▼
+┌──────────────────────────┐      ┌───────────────────────────┐
+│       Tool Registry      │      │       Memory Layers       │
+│ typed tools · schemas    │      │ short-term · session     │
+│ validation · permissions │      │ project · user · tool     │
+└──────────────┬───────────┘      └─────────────┬─────────────┘
+               │                                │
+               └────────────────┬───────────────┘
+                                ▼
+                    ┌────────────────────────┐
+                    │     Model Interface    │
+                    │ provider / model agnostic│
+                    └────────────────────────┘
+```
 
-### Previous: V1
-- Core ReAct loop, 12 tools, IndexedDB vault, floating OS
+### Core layers
 
-## 🏗️ Architecture (All Frontend)
+| Layer | Responsibility |
+| --- | --- |
+| Presentation | Application UI and agent-facing surfaces |
+| Agent Presence | Persistent orb, dock, state, and controls |
+| Context Engine | Selective structured context from the frontend |
+| Runtime | Task planning, execution, validation, correction |
+| Tool Registry | Typed, discoverable, permission-aware actions |
+| Event System | Route/UI/task/build/error lifecycle events |
+| Memory | Layered and selective persistence/retrieval |
+| Model Interface | Replaceable model/provider integration |
 
-### 1. LLM Layer
-- **Mock** (default), **WebLLM** (Llama 3.2, Phi-3.5, LLaVA vision), **BYOK** (OpenAI, Groq), **Ollama**
-- The WebLLM runtime is fetched as ESM at runtime (jsDelivr, then esm.sh) — same as pyodide and
-  onnxruntime-wasm — so it is never bundled and never a build-time dependency. Pin a version in
-  `src/agent/llm/webllmAdapter.ts` (`WEBLLM_VERSION`), or self-host it with
-  `localStorage['frontendai:webllm.url']`. Prefer a bundled copy? `npm i @mlc-ai/web-llm` and
-  change the specifier in `loadWebLLMModule()` back to the bare package name.
+## 🛠️ Tool Architecture
 
-### 2. Tool System (18 tools)
-- **Page**: `readPage`, `queryDOM`, `highlightElement`, `extractArticle`, `captureScreenshot`, `analyzeImage`, `drawOnCanvas`
-- **Productivity**: `createNote`, `createTask`, `searchMemory`, `remember`
-- **System**: `getTime`, `clipboardWrite`, `notify`, `speak`
-- **Code**: `executeJS`, `executePython`, `analyzePageJS`
-- **Agent**: `setAutonomy`, `spawnSubAgent`
+Tools are registered actions rather than arbitrary DOM manipulation.
 
-### 3. Memory
-- Dexie DB + real 384-dim embeddings + graph visualization
-- Canvas drawings in localStorage, notes in IndexedDB
+A tool can define:
 
-### 4. UI — Floating OS
-- **AgentOrb**: Breathing, mood badge, Zzz animation, orbiting dots, thought bubble
-- **AgentDock**: 13 tabs — Chat, Vision, Voice, Whisper, Canvas, Python, Graph, Mind, Actions, Vault, Notes, Tasks, OS
-- **CommandPalette**: `⌘K`
+- Name and description
+- Input schema
+- Validation
+- Handler
+- Result and error shape
+- Risk level / permission requirement
+- Execution lifecycle
 
-### 5. Privacy
-- No backend, no cookies, no telemetry
-- Keys in localStorage, screenshots in sessionStorage, audio never uploaded, Python runs in WASM
+The architecture supports actions such as:
+
+```text
+navigate
+openPanel
+closePanel
+click
+select
+inspect
+create
+edit
+delete
+search
+runTask
+runBuild
+runTest
+```
+
+Existing product tools also cover browser interaction, productivity, code execution, vision, voice, canvas, and agent controls.
+
+## 🧩 Event-Driven Frontend
+
+The environment can react to structured events such as:
+
+- `route_changed`
+- `element_selected`
+- `panel_opened`
+- `user_clicked`
+- `form_updated`
+- `file_changed`
+- `build_started`
+- `build_failed`
+- `build_completed`
+- `error_detected`
+- `task_completed`
+
+The reactive environment hook keeps agent-facing context synchronized with these events without exposing the entire application state.
+
+## 🧠 Memory
+
+FrontendAI uses layered memory so every task does not need to carry the entire history:
+
+- **Short-term** — immediate task context.
+- **Session** — information useful during the current session.
+- **Project** — durable project/task knowledge.
+- **User** — user preferences and reusable context.
+- **Tool** — information associated with tool execution.
+
+Retrieval is selective so the agent receives relevant context rather than an uncontrolled dump of application state.
+
+## 🎛️ Human Control
+
+Autonomy does not mean losing control.
+
+The runtime supports:
+
+- **Assist** — the agent helps while the user remains closely involved.
+- **Autonomous** — the agent can execute a multi-step task within its available tools and permissions.
+- **Pause** — temporarily suspend a running task.
+- **Stop** — terminate a task.
+- **Take Control** — let the user manually intervene.
+- **Resume** — continue from the safe task state/checkpoint when possible.
+
+Destructive actions are permission-gated and can require confirmation.
+
+## 🖥️ Current Frontend Experience
+
+The project includes the existing visual agent experience and browser-native capabilities:
+
+- Floating Agent Orb
+- Agent Dock
+- Chat
+- Vision
+- Voice / local speech capabilities
+- Canvas whiteboard
+- Python WASM execution
+- Memory / graph views
+- Notes and tasks
+- Command palette
+- Companion behavior and activity feedback
+
+The agent presence is designed to feel like part of the operating environment rather than a conventional support widget.
+
+## 🔒 Privacy & Browser-First Design
+
+FrontendAI is built around a frontend-resident execution model:
+
+- No required application backend for the core agent runtime
+- Browser-side state and persistence
+- IndexedDB/Dexie for durable local data
+- WASM-based execution where applicable
+- Model/provider integration kept replaceable
+- No required telemetry service in the core architecture
+
+> Third-party model/CDN providers may still be contacted when a selected model or dependency is configured to load remotely. Check the relevant provider/dependency configuration when strict offline operation is required.
 
 ## 🚀 Quick Start
 
-One command. Works on **Windows (native or WSL), Linux, and macOS** — needs Node `20.19+` or `22.12+`.
+Requirements: Node.js **20.19+ or 22.12+**.
 
 ```bash
+git clone https://github.com/trmv2007-bot/Frontendai.git
+cd Frontendai
 npm install
+npm run dev
 ```
 
-Then start the dev server with `npm run dev` and open http://localhost:5173.
+Then open:
 
-> **Why install is this quiet:** `.npmrc` sets `ignore-scripts=true`. This app is
-> browser-only, and the only dependency with a native install step is
-> `onnxruntime-node` — reachable solely through `@huggingface/transformers`' `node`
-> export condition, which Vite never resolves (it uses the `default` condition →
-> `transformers.web.js` / onnxruntime-web WASM). Every binary the build *does* need
-> (rolldown, lightningcss, sharp) ships as `optionalDependencies` tarballs, so npm
-> picks the right one for your OS/arch with no compile step. Delete that line if you
-> add a dependency that must build at install time.
+```
+http://localhost:5173
+```
 
-Try:
-- "Take screenshot and analyze"
-- "Draw a diagram of my vault"
-- "Run python to plot a chart" (needs matplotlib via micropip)
-- "Remember my name is Alex" → Graph tab → see connections
-- Mic → speak → Whisper local transcribe
-- Leave idle 1min → companion gets bored → suggests action
+### Production build
 
-## 📁 Structure
+```bash
+npm run build
+npm run preview
+```
+
+### Lint
+
+```bash
+npm run lint
+```
+
+### Browser smoke test
+
+FrontendAI has a Playwright browser-level smoke test covering the critical UI path:
+
+```bash
+npm run test:e2e
+```
+
+The CI workflow builds the application, installs Chromium, starts the production preview, and runs the browser smoke test.
+
+## 🧪 Validation
+
+The repository CI currently validates:
+
+1. Dependency installation
+2. Lint
+3. Production TypeScript/Vite build
+4. Chromium setup
+5. Production preview startup
+6. Browser-level E2E smoke test
+7. Critical interaction path: landing page → agent orb → Agent OS → Assist/Autonomous → Activity/Vision/Chat → message submission
+8. Browser console and page errors during the smoke test
+
+## 📁 Project Structure
 
 ```
 src/
-  agent/
-    tools/ definitions (18), executors (JS, Python, Canvas, Vision, Voice)
-    memory/ db.ts + embeddings.ts
-    core/ loop.ts
-  components/
-    AgentOrb (mood), AgentDock (13 tabs), Chat, VisionPanel, VoiceControl, WhisperControl, CanvasBoard, PythonREPL, MemoryGraph, ...
-  hooks/ useAgent, useVoice, useWhisper, useCompanion, usePyodide
+├── agent/
+│   ├── core/
+│   │   ├── taskRuntime.ts
+│   │   ├── permissions.ts
+│   │   └── taskCheckpoint.ts
+│   ├── environment/
+│   │   ├── contextEngine.ts
+│   │   ├── eventBus.ts
+│   │   ├── reactive.ts
+│   │   └── types.ts
+│   ├── memory/
+│   │   └── layers.ts
+│   └── ...
+├── components/
+│   ├── AgentOrb
+│   ├── AgentDock
+│   ├── Chat
+│   ├── VisionPanel
+│   ├── CanvasBoard
+│   ├── PythonREPL
+│   └── ...
+└── ...
+
+e2e/
+└── smoke.mjs
+
+.github/
+└── workflows/
+    └── build.yml
 ```
 
-## 🎯 Evolution
+## 🔌 Extensibility
 
-- **V1**: Core OS, 12 tools, floating OS
-- **V2**: Voice, Vision, Real embeddings
-- **V3**: Memory graph, Whisper, BYOK vision, LLaVA
-- **V4**: Companion behaviors (idle/bored/sleepy/curious), Canvas whiteboard, Python WASM
+FrontendAI is intended to grow through modules instead of rewrites.
 
-All 100% frontend, no backend, ever.
+A feature can contribute:
 
-Built with Vite, React, Tailwind v4, Framer Motion, Dexie, html2canvas, @huggingface/transformers, Pyodide.
+- A tool
+- A context provider
+- A UI component
+- Events
+- Permissions
+- Task/runtime integrations
+- Memory capabilities
+
+This keeps the core runtime stable while allowing new frontend capabilities to become agent-accessible.
+
+## 🗺️ Project Direction
+
+The long-term goal is a frontend where AI is a **native participant in the interface**:
+
+```
+Traditional app:
+User → UI → Backend
+
+FrontendAI:
+User ↔ UI ↔ Agent
+          ↕
+     Context / Tools
+          ↕
+    Runtime / Memory
+          ↕
+      Model Layer
+```
+
+The model is replaceable. The frontend environment, structured context, tools, events, memory, task lifecycle, and human controls form the durable agent platform.
+
+## 📜 Evolution
+
+- **V1** — Core ReAct loop, floating OS, IndexedDB vault, initial tools
+- **V2** — Voice, vision, real embeddings
+- **V3** — Memory graph, Whisper, BYOK vision, LLaVA
+- **V4** — Companion behavior, infinite canvas, Python WASM
+- **Current architecture** — Structured environment context, typed tool/runtime foundations, layered memory, permissions, task checkpoints, and browser-level validation
+
+## 📄 License
+
+See the repository for the project's current license and contribution information.
