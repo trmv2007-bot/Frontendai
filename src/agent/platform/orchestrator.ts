@@ -26,7 +26,12 @@ export class FrontendAgentOrchestrator implements AgentOrchestrator {
   async plan(goalId: string) {
     const goal = this.require(goalId)
     const verbs = goal.objective.match(/\b(build|create|fix|debug|test|compare|analyze|design|plan|update|deploy|review)\b/gi) ?? []
-    goal.steps = ['Inspect the relevant frontend environment', verbs.length ? `Perform: ${verbs[0].toLowerCase()}` : 'Execute the requested objective', 'Verify the result']
+    const primaryVerb = verbs[0]
+    goal.steps = [
+      'Inspect the relevant frontend environment',
+      primaryVerb ? `Perform: ${primaryVerb.toLowerCase()}` : 'Execute the requested objective',
+      'Verify the result',
+    ]
     goal.status = 'planned'
     return [...goal.steps]
   }
@@ -48,7 +53,7 @@ export class FrontendAgentOrchestrator implements AgentOrchestrator {
     const report: VerificationReport = await verificationPipeline.run(checks)
     if (report.passed) goal.status = 'completed'
     else goal.status = 'needs_repair'
-    return { passed: report.passed, checks: report.checks, nextAction: report.next ?? 'ask_user' }
+    return { passed: report.passed, checks: report.checks, nextAction: report.next }
   }
 
   async replan(goalId: string, reason: string) {
