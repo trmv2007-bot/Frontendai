@@ -4,27 +4,21 @@ import { MockAdapter } from '../agent/llm/mockAdapter'
 import { WebLLMAdapter } from '../agent/llm/webllmAdapter'
 import { OpenAIAdapter } from '../agent/llm/openaiAdapter'
 import { TOOL_DEFINITIONS } from '../agent/tools/definitions'
+import { actionRegistry } from '../agent/tools/registry'
 import { contextEngine } from '../agent/environment/contextEngine'
 import type { AgentState, Message, LLMConfig, LLMProvider } from '../agent/types'
 import { db } from '../agent/memory/db'
 
-const DEFAULT_CONFIG: LLMConfig = {
-  provider: 'mock',
-  model: 'mock-v1',
-  temperature: 0.7,
-  maxTokens: 2048
-}
+const DEFAULT_CONFIG: LLMConfig = { provider: 'mock', model: 'mock-v1', temperature: 0.7, maxTokens: 2048 }
 
 function createAdapter(provider: LLMProvider, model: string, apiKey?: string, baseUrl?: string) {
-  switch(provider) {
+  switch (provider) {
     case 'webllm': return new WebLLMAdapter(model)
     case 'openai':
     case 'groq':
     case 'openrouter':
-    case 'ollama':
-      return new OpenAIAdapter({ apiKey: apiKey || '', model, baseUrl })
-    default:
-      return new MockAdapter()
+    case 'ollama': return new OpenAIAdapter({ apiKey: apiKey || '', model, baseUrl })
+    default: return new MockAdapter()
   }
 }
 
@@ -38,6 +32,11 @@ export function useAgent() {
   const loopRef = useRef<AgentLoop | null>(null)
 
   useEffect(() => {
+    // Register the application's capabilities once. The model only receives
+    // definitions; execution is always routed through the registry.
+    const unregister = TOOL_DEFINITIONS.map(definition => actionRegistry.registerTool(definition))
+    contextEngine.setContext({ availableActions: TOOL_DEFINITIONS.map(tool => tool.name) })
+
     const adapter = createAdapter(config.provider, config.model, config.apiKey, config.baseUrl)
     const loop = new AgentLoop(adapter, TOOL_DEFINITIONS, contextEngine)
 
@@ -55,28 +54,25 @@ export function useAgent() {
     })
 
     loopRef.current = loop
-
     db.memories.count().then(c => setState(s => ({ ...s, memoryCount: c })))
     const interval = setInterval(() => db.memories.count().then(c => setState(s => ({ ...s, memoryCount: c }))), 3000)
 
     return () => {
-      unsubState()
-      unsubMsgs()
-      clearInterval(interval)
+      unregister.forEach(remove => remove())
+      unsubState(); unsubMsgs(); clearInterval(interval); loop.destroy(); loopRef.current = null
     }
   }, [config.provider, config.model, config.apiKey, config.baseUrl])
 
-  const send = (content: string) => loopRef.current?.sendUserMessage(content)
-  const clear = async () => {
-    await db.messages.clear()
-    loopRef.current?.clear()
-  }
+  const send = (content: string, mode?: 'assist' | 'autonomous') => loopRef.current?.sendUserMessage(content, mode)
+  const pause = () => loopRef.current?.pause()
+  const resume = () => loopRef.current?.resume()
+  const stop = () => loopRef.current?.stop()
+  const clear = async () => { await db.messages.clear(); loopRef.current?.clear() }
 
   const updateConfig = (patch: Partial<LLMConfig>) => {
-    const next = { ...config, ...patch }
-    setConfig(next)
+    const next = { ...config, ...patch }; setConfig(next)
     localStorage.setItem('frontendai_llm', JSON.stringify(next))
   }
 
-  return { state, messages, send, clear, config, updateConfig, loop: loopRef.current, contextEngine }
+  return { state, messages, send, pause, resume, stop, clear, config, updateConfig, loop: loopRef.current, contextEngine }
 }
