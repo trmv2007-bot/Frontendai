@@ -4,17 +4,13 @@ import { agentEventBus } from '../agent/environment/eventBus'
 
 export function useEnvironmentBridge() {
   useEffect(() => {
-    const providerId = 'browser-environment'
     const unregister = contextEngine.registerProvider({
-      id: providerId,
+      id: 'browser-environment',
       priority: 10,
       getContext: () => ({
         route: window.location.pathname,
         page: document.title || undefined,
-        relevantState: {
-          viewport: { width: window.innerWidth, height: window.innerHeight },
-          visibility: document.visibilityState
-        }
+        relevantState: { viewport: { width: window.innerWidth, height: window.innerHeight }, visibility: document.visibilityState }
       })
     })
 
@@ -22,17 +18,15 @@ export function useEnvironmentBridge() {
     const emitRoute = () => {
       const path = window.location.pathname
       if (path !== lastPath) {
+        const from = lastPath
         lastPath = path
-        agentEventBus.emit('route_changed', { from: lastPath, to: path }, 'browser')
+        agentEventBus.emit('route_changed', { from, to: path }, 'browser')
       }
       contextEngine.setContext({ route: path, page: document.title || undefined })
     }
-
-    const onPopState = emitRoute
     const onClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null
-      if (!target) return
-      const interactive = target.closest('button,a,[role="button"],input,textarea,select') as HTMLElement | null
+      const interactive = target?.closest('button,a,[role="button"],input,textarea,select') as HTMLElement | null
       if (!interactive) return
       agentEventBus.emit('user_clicked', {
         tag: interactive.tagName.toLowerCase(),
@@ -41,14 +35,13 @@ export function useEnvironmentBridge() {
       }, 'browser')
     }
 
-    window.addEventListener('popstate', onPopState)
+    window.addEventListener('popstate', emitRoute)
     document.addEventListener('click', onClick, true)
     document.addEventListener('visibilitychange', emitRoute)
     emitRoute()
-
     return () => {
       unregister()
-      window.removeEventListener('popstate', onPopState)
+      window.removeEventListener('popstate', emitRoute)
       document.removeEventListener('click', onClick, true)
       document.removeEventListener('visibilitychange', emitRoute)
     }
