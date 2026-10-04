@@ -77,7 +77,7 @@ export interface Task {
   due?: number
 }
 
-export type LLMProvider = 'mock' | 'webllm' | 'transformers' | 'openai' | 'anthropic' | 'groq' | 'ollama' | 'openrouter'
+export type LLMProvider = 'mock' | 'puter' | 'webllm' | 'transformers' | 'openai' | 'anthropic' | 'groq' | 'ollama' | 'openrouter'
 
 export interface LLMConfig {
   provider: LLMProvider
