@@ -31,21 +31,27 @@ declare global {
 }
 
 /** Strong-first model policy. The runtime confirms availability before using a candidate. */
-export const PUTER_MODEL_CANDIDATES = [
-  'openai/gpt-6.1-sol-pro',
-  'openai/gpt-6.1-sol',
+export const PUTER_MODEL_CANDIDATES: readonly string[] = [
   'openai/gpt-5.6-sol-pro',
   'openai/gpt-5.6-sol',
+  'openai/gpt-5.6-luna-pro',
   'openai/gpt-5.6-luna',
+  'openai/gpt-5.5-pro',
   'openai/gpt-5.5',
-] as const
+  'openai/gpt-5.4-pro',
+  'openai/gpt-5.4',
+  'openai/gpt-5.3-codex',
+  'openai/gpt-5.2-pro',
+  'openai/gpt-5.2',
+  'openai/gpt-5',
+]
 
 export class PuterAdapter implements LLMAdapter {
   name = 'puter'
   private model: string
   private resolvedModel?: string
 
-  constructor(model = PUTER_MODEL_CANDIDATES[0]) {
+  constructor(model: string = PUTER_MODEL_CANDIDATES[0]) {
     this.model = model
   }
 
@@ -55,11 +61,7 @@ export class PuterAdapter implements LLMAdapter {
     return Boolean(window.puter?.ai?.chat && window.puter?.ai?.listModels)
   }
 
-  /**
-   * Ask Puter which models are currently exposed, then pick the strongest
-   * model from our ordered policy. This avoids hard-coding a model that has
-   * disappeared or changed availability.
-   */
+  /** Ask Puter which models are currently exposed, then pick the strongest supported candidate. */
   async resolveBestModel(): Promise<string> {
     if (!window.puter?.ai) throw new Error('Puter.js is not loaded')
     const models = await window.puter.ai.listModels()
@@ -70,7 +72,7 @@ export class PuterAdapter implements LLMAdapter {
     return this.resolvedModel
   }
 
-  /** Lightweight live probe. Uses Puter's test API so model selection can be verified without consuming normal usage. */
+  /** Lightweight live probe. Uses Puter's test API so model selection can be verified without normal usage. */
   async probeModel(model: string) {
     if (!window.puter?.ai) return { model, ok: false, error: 'Puter.js is not loaded' }
     try {
@@ -133,13 +135,7 @@ export class PuterAdapter implements LLMAdapter {
     for await (const part of response as AsyncIterable<PuterChunk>) {
       if (part.type === 'text' && part.text) onChunk({ text: part.text })
       else if (part.type === 'tool_use') {
-        onChunk({
-          toolCall: {
-            id: part.id,
-            name: part.name,
-            arguments: part.input ?? {},
-          },
-        })
+        onChunk({ toolCall: { id: part.id, name: part.name, arguments: part.input ?? {} } })
       } else if (part.type === 'error') {
         throw new Error(part.text ?? 'Puter model stream failed')
       }
