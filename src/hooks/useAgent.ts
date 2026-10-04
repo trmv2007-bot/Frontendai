@@ -3,6 +3,7 @@ import { AgentLoop } from '../agent/core/loop'
 import { MockAdapter } from '../agent/llm/mockAdapter'
 import { WebLLMAdapter } from '../agent/llm/webllmAdapter'
 import { OpenAIAdapter } from '../agent/llm/openaiAdapter'
+import { PuterAdapter, PUTER_MODEL_CANDIDATES } from '../agent/llm/puterAdapter'
 import { TOOL_DEFINITIONS } from '../agent/tools/definitions'
 import { actionRegistry } from '../agent/tools/registry'
 import { contextEngine } from '../agent/environment/contextEngine'
@@ -10,10 +11,16 @@ import { useEnvironmentBridge } from './useEnvironmentBridge'
 import type { AgentState, Message, LLMConfig, LLMProvider } from '../agent/types'
 import { db } from '../agent/memory/db'
 
-const DEFAULT_CONFIG: LLMConfig = { provider: 'mock', model: 'mock-v1', temperature: 0.7, maxTokens: 2048 }
+const DEFAULT_CONFIG: LLMConfig = {
+  provider: 'puter',
+  model: PUTER_MODEL_CANDIDATES[0],
+  temperature: 0.2,
+  maxTokens: 8192,
+}
 
 function createAdapter(provider: LLMProvider, model: string, apiKey?: string, baseUrl?: string) {
   switch (provider) {
+    case 'puter': return new PuterAdapter(model)
     case 'webllm': return new WebLLMAdapter(model)
     case 'openai':
     case 'groq':
