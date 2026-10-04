@@ -11,7 +11,7 @@ type PuterChunk = {
   message?: { content?: string | null; tool_calls?: Array<{ id: string; function: { name: string; arguments: string } }> }
 }
 
-type PuterModel = {
+export type PuterModel = {
   id: string
   provider?: string
   name?: string
