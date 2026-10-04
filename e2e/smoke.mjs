@@ -12,6 +12,24 @@ try {
 
   await page.goto(process.env.BASE_URL || 'http://127.0.0.1:4173', { waitUntil: 'networkidle' })
 
+  const puterModels = await page.evaluate(async () => {
+    if (!window.puter?.ai?.listModels) return []
+    return await window.puter.ai.listModels()
+  })
+  const modelIds = new Set(puterModels.map(model => model.id))
+  const supported = [
+    'openai/gpt-6.1-sol-pro', 'gpt-6.1-sol-pro',
+    'openai/gpt-6.1-sol', 'gpt-6.1-sol',
+    'openai/gpt-5.6-sol-pro', 'gpt-5.6-sol-pro',
+    'openai/gpt-5.6-sol', 'gpt-5.6-sol',
+    'openai/gpt-5.6-luna', 'gpt-5.6-luna'
+  ]
+  const available = supported.filter(id => modelIds.has(id))
+  if (!available.length) {
+    throw new Error(`No supported Puter reasoning model exposed by the live catalog. Received ${puterModels.length} models.`)
+  }
+  console.log('Puter model catalog verified:', available[0])
+
   if (!await page.getByText('FrontendAI', { exact: true }).first().isVisible()) {
     throw new Error('FrontendAI landing page did not render')
   }
