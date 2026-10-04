@@ -18,6 +18,21 @@ const DEFAULT_CONFIG: LLMConfig = {
   maxTokens: 8192,
 }
 
+function loadConfig(): LLMConfig {
+  try {
+    const saved = localStorage.getItem('frontendai_llm')
+    if (!saved) return DEFAULT_CONFIG
+    const parsed = JSON.parse(saved) as LLMConfig
+    if (parsed.provider === 'mock' || parsed.model === 'mock-v1') {
+      localStorage.setItem('frontendai_llm', JSON.stringify(DEFAULT_CONFIG))
+      return DEFAULT_CONFIG
+    }
+    return parsed
+  } catch {
+    return DEFAULT_CONFIG
+  }
+}
+
 function createAdapter(provider: LLMProvider, model: string, apiKey?: string, baseUrl?: string) {
   switch (provider) {
     case 'puter': return new PuterAdapter(model)
@@ -32,10 +47,7 @@ function createAdapter(provider: LLMProvider, model: string, apiKey?: string, ba
 
 export function useAgent() {
   useEnvironmentBridge()
-  const [config, setConfig] = useState<LLMConfig>(() => {
-    const saved = localStorage.getItem('frontendai_llm')
-    return saved ? JSON.parse(saved) : DEFAULT_CONFIG
-  })
+  const [config, setConfig] = useState<LLMConfig>(loadConfig)
   const [state, setState] = useState<AgentState>({ status: 'idle', autonomy: 2, memoryCount: 0, isOnline: true })
   const [messages, setMessages] = useState<Message[]>([])
   const loopRef = useRef<AgentLoop | null>(null)
