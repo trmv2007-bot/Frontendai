@@ -17,10 +17,18 @@ export interface TaskWorkspace {
   updatedAt: number
 }
 
+type WorkspaceListener = (workspace: TaskWorkspace | undefined) => void
+
 const id = () => globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2)}`
 
 export class TaskWorkspaceRegistry {
   private workspaces = new Map<string, TaskWorkspace>()
+  private listeners = new Set<WorkspaceListener>()
+
+  subscribe(listener: WorkspaceListener) {
+    this.listeners.add(listener)
+    return () => this.listeners.delete(listener)
+  }
 
   create(taskId: string, kind: WorkspaceKind, title: string, panels: Omit<WorkspacePanel, 'id'>[] = []) {
     const workspace: TaskWorkspace = {
@@ -29,6 +37,7 @@ export class TaskWorkspaceRegistry {
       createdAt: Date.now(), updatedAt: Date.now(),
     }
     this.workspaces.set(workspace.id, workspace)
+    this.emit(workspace)
     return this.snapshot(workspace)
   }
 
@@ -37,15 +46,36 @@ export class TaskWorkspaceRegistry {
     if (!workspace) throw new Error(`Unknown task workspace: ${workspaceId}`)
     workspace.panels.push({ ...panel, id: id() })
     workspace.updatedAt = Date.now()
+    this.emit(workspace)
+    return this.snapshot(workspace)
+  }
+
+  updatePanel(workspaceId: string, panelId: string, patch: Partial<Omit<WorkspacePanel, 'id'>>) {
+    const workspace = this.workspaces.get(workspaceId)
+    if (!workspace) throw new Error(`Unknown task workspace: ${workspaceId}`)
+    const panel = workspace.panels.find(item => item.id === panelId)
+    if (!panel) throw new Error(`Unknown workspace panel: ${panelId}`)
+    Object.assign(panel, patch)
+    workspace.updatedAt = Date.now()
+    this.emit(workspace)
     return this.snapshot(workspace)
   }
 
   get(workspaceId: string) { const item = this.workspaces.get(workspaceId); return item ? this.snapshot(item) : undefined }
   forTask(taskId: string) { return [...this.workspaces.values()].filter(item => item.taskId === taskId).map(item => this.snapshot(item)) }
-  remove(workspaceId: string) { return this.workspaces.delete(workspaceId) }
+  remove(workspaceId: string) {
+    const removed = this.workspaces.delete(workspaceId)
+    if (removed) this.emit(undefined)
+    return removed
+  }
+
+  private emit(workspace: TaskWorkspace | undefined) {
+    const snapshot = workspace ? this.snapshot(workspace) : undefined
+    this.listeners.forEach(listener => listener(snapshot))
+  }
 
   private snapshot(workspace: TaskWorkspace): TaskWorkspace {
-    return { ...workspace, panels: workspace.panels.map(panel => ({ ...panel })) }
+    return { ...workspace, panels: workspace.panels.map(panel => ({ ...panel, data: panel.data ? { ...panel.data } : undefined })) }
   }
 }
 
